@@ -30,6 +30,15 @@ export const useSentRequests = (page?: number, limit?: number) => {
   });
 };
 
+// Get completed trades
+export const useCompletedTrades = (userId?: string) => {
+  return useQuery({
+    queryKey: ['trades', 'completed', userId],
+    queryFn: () => tradeService.getCompletedTrades(userId),
+    refetchOnWindowFocus: false,
+  });
+};
+
 // Create trade request mutation
 export const useCreateTradeRequest = () => {
   const queryClient = useQueryClient();

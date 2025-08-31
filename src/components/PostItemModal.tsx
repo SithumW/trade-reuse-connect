@@ -61,6 +61,8 @@ export const PostItemModal: React.FC<PostItemModalProps> = ({
     condition: '',
     latitude: '',
     longitude: '',
+    phone_number: '',
+    whatsapp_number: '',
   });
   
   const [images, setImages] = useState<File[]>([]);
@@ -198,6 +200,26 @@ export const PostItemModal: React.FC<PostItemModalProps> = ({
       newErrors.longitude = 'Longitude must be between -180 and 180';
     }
 
+    // Phone number validation (required)
+    if (!formData.phone_number.trim()) {
+      newErrors.phone_number = 'Phone number is required';
+    } else {
+      // Phone number regex: supports various formats (+1234567890, 1234567890, 123-456-7890, etc.)
+      const phoneRegex = /^[\+]?[0-9]?[\s\-\(\)]?[0-9]{3,4}[\s\-\(\)]?[0-9]{3,4}[\s\-]?[0-9]{3,4}$/;
+      if (!phoneRegex.test(formData.phone_number.trim())) {
+        newErrors.phone_number = 'Please enter a valid phone number';
+      }
+    }
+
+    // WhatsApp number validation (optional)
+    if (formData.whatsapp_number.trim()) {
+      // Same phone regex for WhatsApp number
+      const phoneRegex = /^[\+]?[0-9]?[\s\-\(\)]?[0-9]{3,4}[\s\-\(\)]?[0-9]{3,4}[\s\-]?[0-9]{3,4}$/;
+      if (!phoneRegex.test(formData.whatsapp_number.trim())) {
+        newErrors.whatsapp_number = 'Please enter a valid WhatsApp number';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -222,6 +244,12 @@ export const PostItemModal: React.FC<PostItemModalProps> = ({
       submitData.append('description', formData.description.trim());
       submitData.append('category', formData.category);
       submitData.append('condition', formData.condition);
+      submitData.append('phone_number', formData.phone_number.trim());
+      
+      // Add optional WhatsApp number if provided
+      if (formData.whatsapp_number.trim()) {
+        submitData.append('whatsapp_number', formData.whatsapp_number.trim());
+      }
       
       // Add location if provided
       if (formData.latitude && formData.longitude) {
@@ -255,6 +283,8 @@ export const PostItemModal: React.FC<PostItemModalProps> = ({
       condition: '',
       latitude: '',
       longitude: '',
+      phone_number: '',
+      whatsapp_number: '',
     });
     setImages([]);
     // Cleanup image previews
@@ -381,6 +411,49 @@ export const PostItemModal: React.FC<PostItemModalProps> = ({
                 <div className="flex items-center gap-1 text-red-500 text-sm">
                   <AlertCircle className="h-4 w-4" />
                   {errors.condition}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Phone Numbers Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone_number">
+                Phone Number <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="phone_number"
+                placeholder="Enter your phone number"
+                value={formData.phone_number}
+                onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                disabled={isSubmitting}
+                className={errors.phone_number ? 'border-red-500' : ''}
+              />
+              {errors.phone_number && (
+                <div className="flex items-center gap-1 text-red-500 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  {errors.phone_number}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_number">
+                WhatsApp Number (Optional)
+              </Label>
+              <Input
+                id="whatsapp_number"
+                placeholder="Enter your WhatsApp number"
+                value={formData.whatsapp_number}
+                onChange={(e) => handleInputChange('whatsapp_number', e.target.value)}
+                disabled={isSubmitting}
+                className={errors.whatsapp_number ? 'border-red-500' : ''}
+              />
+              {errors.whatsapp_number && (
+                <div className="flex items-center gap-1 text-red-500 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  {errors.whatsapp_number}
                 </div>
               )}
             </div>

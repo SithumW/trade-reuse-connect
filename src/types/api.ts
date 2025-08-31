@@ -96,6 +96,8 @@ export interface Item {
   status: ItemStatus;
   latitude?: number;
   longitude?: number;
+  phone_number: string;
+  whatsapp_number?: string;
   posted_at: string;
   images: ItemImage[];
   user: User;
@@ -111,6 +113,8 @@ export interface ItemCreateRequest {
   condition: ItemCondition;
   latitude?: number;
   longitude?: number;
+  phone_number: string;
+  whatsapp_number?: string;
   // images will be handled as FormData
 }
 
@@ -121,6 +125,8 @@ export interface ItemUpdateRequest {
   condition?: ItemCondition;
   latitude?: number;
   longitude?: number;
+  phone_number?: string;
+  whatsapp_number?: string;
   removeImageIds?: string;
   // newImages will be handled as FormData
 }
@@ -139,6 +145,9 @@ export type TradeRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLE
 export type TradeStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 
 export interface TradeRequest {
+  trade: {
+    status: string
+  };
   id: string;
   requested_item_id: string;
   offered_item_id: string;
@@ -153,21 +162,37 @@ export interface TradeRequest {
 export interface Trade {
   id: string;
   trade_request_id: string;
-  requested_item_id: string;
-  offered_item_id: string;
-  requester_id: string;
-  owner_id: string;
-  location?: string;
-  status: TradeStatus;
-  completed_at?: string;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   created_at: string;
-  requested_item: Item;
-  offered_item: Item;
-  requester: User;
-  owner: User;
-  trade_request: {
-    requested_at: string;
+  completed_at?: string;
+  
+  // The actual structure includes trade_request, not trade_requests array
+  trade_request?: {
+    id: string;
+    offered_item: {
+      id: string;
+      title: string;
+      condition: string;
+      images: ItemImage[];
+      user_id: string;
+    };
+    requested_item: {
+      id: string;
+      title: string;
+      condition: string;
+      images: ItemImage[];
+      user_id: string;
+    };
+    requester: User;
   };
+  
+  // Legacy support for existing code
+  trade_requests?: Array<{
+    id: string;
+    offered_item: Item;
+    requested_item: Item;
+    requester: User;
+  }>;
 }
 
 export interface TradeRequestCreate {
@@ -177,6 +202,7 @@ export interface TradeRequestCreate {
 
 // Rating Types
 export interface Rating {
+  rater_id: string;
   id: string;
   trade_id: string;
   reviewer_id: string;

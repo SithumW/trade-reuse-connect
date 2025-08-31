@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProfileModal from "@/components/ProfileModal";
-import MyTradesModal from "@/components/MyTradesModal";
+import { Trade, Rating } from "@/types/api";
 import { 
   LogOut, 
   Plus, 
@@ -16,11 +16,16 @@ import {
 
 interface HeaderProps {
   user?: {
+    id: string; // Add user ID
     name: string;
     avatar?: string;
     badge: "bronze" | "silver" | "gold" | "diamond" | "ruby";
     points: number;
   };
+  completedTrades?: Trade[];
+  userRatings?: Rating[];
+  userGivenRatings?: Rating[]; // Ratings given by the current user
+  onFetchProfileData?: (userId: string) => void;
   onLoginClick?: () => void;
   onLogoutClick?: () => void;
   onPostItemClick?: () => void;
@@ -36,7 +41,18 @@ const badgeConfig = {
   ruby: { label: "Ruby Trader", color: "bg-red-500" }
 };
 
-export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick, onMyItemsClick, onMyTradesClick }: HeaderProps) => {
+export const Header = ({ 
+  user, 
+  completedTrades,
+  userRatings,
+  userGivenRatings,
+  onFetchProfileData,
+  onLoginClick, 
+  onLogoutClick, 
+  onPostItemClick, 
+  onMyItemsClick, 
+  onMyTradesClick 
+}: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -88,8 +104,11 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick, onM
                 </div>
                 
                 <ProfileModal 
+                  userId={user.id}
                   isCurrentUser={true}
-                  user={user}
+                  completedTrades={completedTrades}
+                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
+                  onFetchProfileData={onFetchProfileData}
                   trigger={
                     <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
                       <Avatar className="h-8 w-8">
@@ -141,8 +160,11 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick, onM
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <ProfileModal 
+                  userId={user.id}
                   isCurrentUser={true}
-                  user={user}
+                  completedTrades={completedTrades}
+                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
+                  onFetchProfileData={onFetchProfileData}
                   trigger={
                     <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
                       <Avatar className="h-10 w-10">

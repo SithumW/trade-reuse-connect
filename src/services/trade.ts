@@ -101,6 +101,21 @@ class TradeService {
     
     throw new Error(response.message || 'Failed to get sent requests');
   }
+
+  // Get completed trades for a user
+  async getCompletedTrades(userId?: string): Promise<Trade[]> {
+ 
+    const url = userId ? `/trades/completed/${userId}` : '/trades/completed';
+    const response = await apiClient.get<Trade[]>(url);
+    if (response.success && response.data) {
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      console.warn('Unexpected response structure for completed trades:', response.data);
+      return [];
+    }
+    throw new Error(response.message || 'Failed to get completed trades');
+  }
 }
 
 export const tradeService = new TradeService();

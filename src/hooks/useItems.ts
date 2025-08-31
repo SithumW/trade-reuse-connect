@@ -23,6 +23,17 @@ export const useItem = (itemId: string) => {
   });
 };
 
+// Get items by user ID
+export const useItemsByUser = (userId: string) => {
+  return useQuery({
+    queryKey: ['items', 'user', userId],
+    queryFn: () => itemService.getItemsByUser(userId),
+    enabled: !!userId,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
 // Create new item mutation
 export const useCreateItem = () => {
   const queryClient = useQueryClient();
@@ -32,6 +43,8 @@ export const useCreateItem = () => {
     onSuccess: (newItem) => {
       // Invalidate and refetch items queries
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      // Invalidate user-specific items queries
+      queryClient.invalidateQueries({ queryKey: ['items', 'user'] });
       toast.success('Item created successfully!');
     },
     onError: (error: any) => {
@@ -59,6 +72,8 @@ export const useUpdateItem = () => {
       queryClient.setQueryData(['item', variables.itemId], updatedItem);
       // Invalidate items queries
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      // Invalidate user-specific items queries
+      queryClient.invalidateQueries({ queryKey: ['items', 'user'] });
       toast.success('Item updated successfully!');
     },
     onError: (error: any) => {
@@ -78,6 +93,8 @@ export const useDeleteItem = () => {
       queryClient.removeQueries({ queryKey: ['item', itemId] });
       // Invalidate items queries
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      // Invalidate user-specific items queries
+      queryClient.invalidateQueries({ queryKey: ['items', 'user'] });
       toast.success('Item deleted successfully!');
     },
     onError: (error: any) => {
@@ -98,6 +115,8 @@ export const useUpdateItemStatus = () => {
       queryClient.setQueryData(['item', variables.itemId], updatedItem);
       // Invalidate items queries
       queryClient.invalidateQueries({ queryKey: ['items'] });
+      // Invalidate user-specific items queries
+      queryClient.invalidateQueries({ queryKey: ['items', 'user'] });
       toast.success(`Item ${variables.status.toLowerCase()} successfully!`);
     },
     onError: (error: any) => {

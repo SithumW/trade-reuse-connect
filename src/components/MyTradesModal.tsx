@@ -6,7 +6,8 @@ import {
   useSentRequests,
   useAcceptTradeRequest,
   useRejectTradeRequest,
-  useCancelTradeRequest
+  useCancelTradeRequest,
+  useCompleteTrade
 } from '@/hooks/useTradeRequests';
 import { TradeRequest, Trade } from '@/types/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +26,9 @@ import {
   Trash2,
   Calendar,
   Package,
-  Loader2
+  Loader2,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getImageUrl } from '@/config/env';
@@ -43,7 +46,8 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   onViewItem
 }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('received');
+  const [revealedContacts, setRevealedContacts] = useState<Set<string>>(new Set());
 
   // API hooks with safe defaults
   const { data: myTrades = [], isLoading: tradesLoading, error: tradesError } = useMyTrades();
@@ -54,6 +58,19 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   const safeMyTrades = Array.isArray(myTrades) ? myTrades : [];
   const safeReceivedRequests = Array.isArray(receivedRequests) ? receivedRequests : [];
   const safeSentRequests = Array.isArray(sentRequests) ? sentRequests : [];
+
+  // Filter sent requests to exclude accepted ones
+  const pendingSentRequests = safeSentRequests.filter(request => request.status !== 'ACCEPTED');
+
+  // Filter for accepted requests (both received and sent that are accepted - show all including completed)
+  const acceptedRequests = [
+    ...safeReceivedRequests.filter(request => 
+      request.status === 'ACCEPTED'
+    ),
+    ...safeSentRequests.filter(request => 
+      request.status === 'ACCEPTED'
+    )
+  ];
 
   // Log errors for debugging
   React.useEffect(() => {
@@ -66,20 +83,9 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   const acceptTradeMutation = useAcceptTradeRequest();
   const rejectTradeMutation = useRejectTradeRequest();
   const cancelTradeMutation = useCancelTradeRequest();
+  const completeTradeRequest = useCompleteTrade();
 
   const isLoading = tradesLoading || receivedLoading || sentLoading;
-
-  // Combine different types of data for "All Trades" tab
-  // Convert trade requests to a common format for display
-  const allTradesData: Array<
-    | { type: 'trade'; data: Trade }
-    | { type: 'request_received'; data: TradeRequest }
-    | { type: 'request_sent'; data: TradeRequest }
-  > = [
-    ...safeMyTrades.map((trade): { type: 'trade'; data: Trade } => ({ type: 'trade', data: trade })),
-    ...safeReceivedRequests.map((req): { type: 'request_received'; data: TradeRequest } => ({ type: 'request_received', data: req })),
-    ...safeSentRequests.map((req): { type: 'request_sent'; data: TradeRequest } => ({ type: 'request_sent', data: req }))
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -128,6 +134,19 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
     }
   };
 
+  const handleCompleteTrade = async (requestId: string) => {
+    try {
+      await completeTradeRequest.mutateAsync(requestId);
+    } catch (error) {
+      console.error('Complete trade error:', error);
+    }
+  };
+
+  const handleRevealContacts = (requestId: string) => {
+    setRevealedContacts(prev => new Set(prev).add(requestId));
+    toast.success('Contact information revealed');
+  };
+
   const handleViewItem = (item: any) => {
     if (onViewItem) {
       // Transform the item data to match the expected structure
@@ -154,8 +173,21 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   };
 
   // Trade Request Card Component
-  const TradeRequestCard = ({ request, type }: { request: TradeRequest; type: 'sent' | 'received' }) => {
+  const TradeRequestCard = ({ 
+    request, 
+    type, 
+    showContacts = false, 
+    onRevealContacts,
+    onCompleteTrade 
+  }: { 
+    request: TradeRequest; 
+    type: 'sent' | 'received' | 'accepted'; 
+    showContacts?: boolean;
+    onRevealContacts?: (requestId: string) => void;
+    onCompleteTrade?: (requestId: string) => void;
+  }) => {
     const isReceived = type === 'received';
+    const isAccepted = type === 'accepted';
     
     // For received requests: otherUser is the requester
     // For sent requests: otherUser should be the owner of the requested item
@@ -165,13 +197,16 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
     
     const myItem = isReceived ? request.requested_item : request.offered_item;
     const theirItem = isReceived ? request.offered_item : request.requested_item;
-    const isMutating = acceptTradeMutation.isPending || rejectTradeMutation.isPending || cancelTradeMutation.isPending;
+    const isMutating = acceptTradeMutation.isPending || rejectTradeMutation.isPending || cancelTradeMutation.isPending || completeTradeRequest.isPending;
 
     // Safety check - if we don't have the required data, don't render
     if (!otherUser || !myItem || !theirItem) {
       console.warn('Missing required data for trade request:', { otherUser, myItem, theirItem, request });
       return null;
     }
+
+    // Check if the trade is completed
+    const isTradeCompleted = request.trade && request.trade.status === 'COMPLETED';
 
     return (
       <Card className="mb-4">
@@ -198,9 +233,22 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
                 </p>
               </div>
             </div>
-            <Badge className={`${getStatusColor(request.status)} flex items-center space-x-1`}>
-              {getStatusIcon(request.status)}
-              <span className="capitalize">{request.status.toLowerCase()}</span>
+            <Badge className={`${
+              isTradeCompleted 
+                ? 'bg-green-100 text-green-800' 
+                : getStatusColor(request.status)
+            } flex items-center space-x-1`}>
+              {isTradeCompleted ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Completed</span>
+                </>
+              ) : (
+                <>
+                  {getStatusIcon(request.status)}
+                  <span className="capitalize">{request.status.toLowerCase()}</span>
+                </>
+              )}
             </Badge>
           </div>
         </CardHeader>
@@ -226,6 +274,21 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
                   <p className="text-xs text-muted-foreground mt-1 capitalize">
                     {(myItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
                   </p>
+                  {/* Show phone numbers for my item if contacts are revealed */}
+                  {isAccepted  && myItem.phone_number && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-1 text-xs text-green-600">
+                        <Phone className="h-3 w-3" />
+                        <span>Phone: {myItem.phone_number}</span>
+                      </div>
+                      {myItem.whatsapp_number && (
+                        <div className="flex items-center gap-1 text-xs text-green-600">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>WhatsApp: {myItem.whatsapp_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -254,6 +317,21 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
                   <p className="text-xs text-muted-foreground mt-1 capitalize">
                     {(theirItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
                   </p>
+                  {/* Show phone numbers for their item if contacts are revealed */}
+                  {isAccepted  && theirItem.phone_number && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center gap-1 text-xs text-green-600">
+                        <Phone className="h-3 w-3" />
+                        <span>Phone: {theirItem.phone_number}</span>
+                      </div>
+                      {theirItem.whatsapp_number && (
+                        <div className="flex items-center gap-1 text-xs text-green-600">
+                          <MessageCircle className="h-3 w-3" />
+                          <span>WhatsApp: {theirItem.whatsapp_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -261,6 +339,50 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
 
           {/* Action Buttons */}
           <div className="flex space-x-2">
+            {/* Buttons for accepted requests */}
+            {isAccepted && (
+              <>
+                {/* Show "Reveal Contacts" button for all accepted requests (completed or not) */}
+                {! onRevealContacts && (
+                  <Button
+                    onClick={() => onRevealContacts(request.id)}
+                    variant="outline"
+                    className="flex-1"
+                    size="sm"
+                  >
+                    <Phone className="h-4 w-4 mr-2" />
+                    Reveal Contacts
+                  </Button>
+                )}
+
+                {/* Show "Complete Trade" button only for non-completed trades */}
+                {!isTradeCompleted && onCompleteTrade && (
+                  <Button
+                    onClick={() => onCompleteTrade(request.id)}
+                    disabled={completeTradeRequest.isPending}
+                    className="flex-1"
+                    size="sm"
+                  >
+                    {completeTradeRequest.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Complete Trade
+                  </Button>
+                )}
+
+                {/* Show completed message for completed trades */}
+                {isTradeCompleted && (
+                  <div className="flex-1 flex items-center justify-center p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                    <span className="text-sm text-green-700 font-medium">Trade completed</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Original buttons for received requests */}
             {isReceived && request.status === 'PENDING' && (
               <>
                 <Button
@@ -293,7 +415,8 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
               </>
             )}
             
-            {!isReceived && request.status === 'PENDING' && (
+            {/* Button for pending sent requests */}
+            {!isReceived && !isAccepted && request.status === 'PENDING' && (
               <Button
                 onClick={() => handleCancelTrade(request.id)}
                 disabled={isMutating}
@@ -310,113 +433,9 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
               </Button>
             )}
 
+            {/* View Item button - always show for all requests */}
             <Button
               onClick={() => handleViewItem(isReceived ? theirItem : theirItem)}
-              variant="outline"
-              size="sm"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              View Item
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Trade Card Component (for completed trades)
-  const TradeCard = ({ trade }: { trade: Trade }) => {
-    const isRequester = trade.requester_id === user?.id;
-    const otherUser = isRequester ? trade.owner : trade.requester;
-    const myItem = isRequester ? trade.offered_item : trade.requested_item;
-    const theirItem = isRequester ? trade.requested_item : trade.offered_item;
-
-    return (
-      <Card className="mb-4">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <ProfileModal 
-                user={otherUser}
-                trigger={
-                  <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={otherUser.image} />
-                      <AvatarFallback>
-                        {otherUser.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                }
-              />
-              <div>
-                <p className="font-semibold">{otherUser.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(trade.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-            <Badge className={`${getStatusColor(trade.status)} flex items-center space-x-1`}>
-              {getStatusIcon(trade.status)}
-              <span className="capitalize">{trade.status.toLowerCase()}</span>
-            </Badge>
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            {/* My Item */}
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground">Your Item</h4>
-              <div className="flex space-x-3 p-3 border rounded-lg">
-                <img
-                  src={getImageUrl(myItem.images?.[0]?.url) || '/placeholder.svg'}
-                  alt={myItem.title || 'Item'}
-                  className="w-16 h-16 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <h5 className="font-semibold text-sm">{myItem.title || 'Unknown Item'}</h5>
-                  <Badge variant="outline" className="text-xs mt-1">
-                    {myItem.category || 'Unknown'}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    {(myItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div className="flex items-center justify-center">
-              <ArrowRightLeft className="h-6 w-6 text-muted-foreground" />
-            </div>
-
-            {/* Their Item */}
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground">Their Item</h4>
-              <div className="flex space-x-3 p-3 border rounded-lg">
-                <img
-                  src={getImageUrl(theirItem.images?.[0]?.url) || '/placeholder.svg'}
-                  alt={theirItem.title || 'Item'}
-                  className="w-16 h-16 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <h5 className="font-semibold text-sm">{theirItem.title || 'Unknown Item'}</h5>
-                  <Badge variant="outline" className="text-xs mt-1">
-                    {theirItem.category || 'Unknown'}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    {(theirItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* View Button */}
-          <div className="flex space-x-2">
-            <Button
-              onClick={() => handleViewItem(theirItem)}
               variant="outline"
               size="sm"
             >
@@ -441,17 +460,17 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all" className="flex items-center space-x-2">
-              <Package className="h-4 w-4" />
-              <span>All Trades ({allTradesData.length})</span>
-            </TabsTrigger>
             <TabsTrigger value="received" className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4" />
               <span>Received ({safeReceivedRequests.length})</span>
             </TabsTrigger>
             <TabsTrigger value="sent" className="flex items-center space-x-2">
               <Clock className="h-4 w-4" />
-              <span>Sent ({safeSentRequests.length})</span>
+              <span>Sent ({pendingSentRequests.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="accepted" className="flex items-center space-x-2">
+              <Package className="h-4 w-4" />
+              <span>Accepted ({acceptedRequests.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -475,28 +494,6 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
           {/* Tab Contents - only show when not loading and no errors */}
           {!isLoading && !tradesError && !receivedError && !sentError && (
             <>
-              <TabsContent value="all" className="space-y-4 mt-6">
-                {allTradesData.length === 0 ? (
-                  <div className="text-center py-8">
-                    <ArrowRightLeft className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold">No trades yet</h3>
-                    <p className="text-muted-foreground">Your trade requests will appear here</p>
-                  </div>
-                ) : (
-                  allTradesData.map((item) => 
-                    item.type === 'trade' ? (
-                      <TradeCard key={`trade-${item.data.id}`} trade={item.data} />
-                    ) : (
-                      <TradeRequestCard 
-                        key={`request-${item.data.id}`} 
-                        request={item.data} 
-                        type={item.type === 'request_received' ? 'received' : 'sent'} 
-                      />
-                    )
-                  )
-                )}
-              </TabsContent>
-
               <TabsContent value="received" className="space-y-4 mt-6">
                 {safeReceivedRequests.length === 0 ? (
                   <div className="text-center py-8">
@@ -512,15 +509,36 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
               </TabsContent>
 
               <TabsContent value="sent" className="space-y-4 mt-6">
-                {safeSentRequests.length === 0 ? (
+                {pendingSentRequests.length === 0 ? (
                   <div className="text-center py-8">
                     <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold">No sent requests</h3>
                     <p className="text-muted-foreground">Trade requests you send will appear here</p>
                   </div>
                 ) : (
-                  safeSentRequests.map((request) => (
+                  pendingSentRequests.map((request) => (
                     <TradeRequestCard key={request.id} request={request} type="sent" />
+                  ))
+                )}
+              </TabsContent>
+
+              <TabsContent value="accepted" className="space-y-4 mt-6">
+                {acceptedRequests.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold">No accepted requests</h3>
+                    <p className="text-muted-foreground">Accepted trade requests will appear here</p>
+                  </div>
+                ) : (
+                  acceptedRequests.map((request) => (
+                    <TradeRequestCard 
+                      key={request.id} 
+                      request={request} 
+                      type="accepted"
+                      showContacts={true}
+                      onRevealContacts={handleRevealContacts}
+                      onCompleteTrade={handleCompleteTrade}
+                    />
                   ))
                 )}
               </TabsContent>

@@ -26,6 +26,15 @@ class ItemService {
     throw new Error(response.message || 'Failed to get item');
   }
 
+  // Get items by user ID
+  async getItemsByUser(userId: string): Promise<{ items: Item[] }> {
+    const response = await apiClient.get<{ items: Item[] }>(`/items/user/${userId}`);
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to get user items');
+  }
+
   // Create new item with images
   async createItem(formData: FormData): Promise<Item> {
     // Use the regular post method since items API follows standard format

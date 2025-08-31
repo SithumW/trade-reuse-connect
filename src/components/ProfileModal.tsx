@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { userService } from "@/services/user";
-import { User, UserProfile, RatingStats } from "@/types/api";
+import { User, UserProfile, RatingStats, Trade, Rating } from "@/types/api";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   User as UserIcon,
   Star,
@@ -28,14 +29,21 @@ import {
   Handshake,
   MessageSquare,
   TrendingUp,
-  Users
+  Users,
+  ArrowRightLeft,
+  Send
 } from "lucide-react";
+import { toast } from "sonner";
+import { getImageUrl } from "@/config/env";
 
 interface ProfileModalProps {
   userId?: string;
   user?: User; // For displaying minimal user data immediately
   trigger?: React.ReactNode;
   isCurrentUser?: boolean;
+  completedTrades?: Trade[]; // Pass completed trades from parent
+  userRatings?: Rating[]; // Pass user ratings from parent
+  onFetchProfileData?: (userId: string) => void; // Callback to trigger data fetch in parent
 }
 
 // Badge configuration
@@ -72,13 +80,24 @@ const badgeConfig = {
   }
 };
 
-const ProfileModal = ({ userId, user, trigger, isCurrentUser = false }: ProfileModalProps) => {
+const ProfileModal = ({ 
+  userId, 
+  user, 
+  trigger, 
+  isCurrentUser = false,
+  completedTrades = [],
+  userRatings = [],
+  onFetchProfileData
+}: ProfileModalProps) => {
   const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Rating form state
+  const [ratingForms, setRatingForms] = useState<Record<string, { rating: number; comment: string; isSubmitting: boolean }>>({});
 
   // Use provided user data or current user if it's the current user
   const displayUser = user || (isCurrentUser ? currentUser : null);
@@ -154,6 +173,88 @@ const ProfileModal = ({ userId, user, trigger, isCurrentUser = false }: ProfileM
       </Avatar>
     </Button>
   );
+
+  // Update the handleSubmitRating function
+  const handleSubmitRating = async (tradeId: string, ratedUserId?: string) => {
+    console.log('handleSubmitRating called with:', { tradeId, ratedUserId, currentUserId: currentUser?.id });
+    
+    if (!ratedUserId || !currentUser?.id) {
+      toast.error('Unable to submit rating - missing user information');
+      console.error('Missing required IDs:', { ratedUserId, currentUserId: currentUser?.id });
+      return;
+    }
+
+    // Prevent rating yourself
+    if (ratedUserId === currentUser.id) {
+      toast.error('You cannot rate yourself');
+      console.error('Attempted self-rating:', { ratedUserId, currentUserId: currentUser.id });
+      return;
+    }
+
+    const ratingForm = ratingForms[tradeId];
+    if (!ratingForm || ratingForm.rating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+
+    // Set submitting state
+    setRatingForms(prev => ({
+      ...prev,
+      [tradeId]: { ...ratingForm, isSubmitting: true }
+    }));
+
+    try {
+      const ratingData = {
+        trade_id: tradeId,
+        reviewee_id: ratedUserId,
+        rating: ratingForm.rating,
+        comment: ratingForm.comment.trim() || undefined
+      };
+
+      console.log('Sending rating data:', ratingData);
+
+      // Use the rating service from our API services
+      const response = await fetch(`${import.meta.env.VITE_API_ENDPOINT}/ratings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(ratingData)
+      });
+
+      const result = await response.json();
+      console.log('Rating API response:', result);
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to submit rating');
+      }
+
+      toast.success('Rating submitted successfully!');
+      
+      // Clear the form
+      setRatingForms(prev => {
+        const newForms = { ...prev };
+        delete newForms[tradeId];
+        return newForms;
+      });
+
+      // Trigger profile data refresh if callback provided
+      if (onFetchProfileData && ratedUserId) {
+        onFetchProfileData(ratedUserId);
+      }
+
+    } catch (error: any) {
+      console.error('Error submitting rating:', error);
+      toast.error(error.message || 'Failed to submit rating');
+    } finally {
+      // Clear submitting state
+      setRatingForms(prev => ({
+        ...prev,
+        [tradeId]: { ...ratingForm, isSubmitting: false }
+      }));
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -237,7 +338,7 @@ const ProfileModal = ({ userId, user, trigger, isCurrentUser = false }: ProfileM
           <Tabs defaultValue="stats" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="stats">Statistics</TabsTrigger>
-              <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="rating">Rating</TabsTrigger>
             </TabsList>
 
@@ -310,17 +411,438 @@ const ProfileModal = ({ userId, user, trigger, isCurrentUser = false }: ProfileM
               </div>
             </TabsContent>
 
-            {/* Activity Tab */}
-            <TabsContent value="activity" className="space-y-4">
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Activity Feed</h3>
-                <p className="text-muted-foreground text-sm mb-4">
-                  Recent activity and achievements will appear here
-                </p>
-                {/* TODO: Implement activity feed */}
-                <Badge variant="outline">Coming Soon</Badge>
-              </div>
+            {/* Completed Trades Tab */}
+            <TabsContent value="completed" className="space-y-4">
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : completedTrades && completedTrades.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Completed Trades</h3>
+                    <Badge variant="secondary">{completedTrades.length} trade{completedTrades.length !== 1 ? 's' : ''}</Badge>
+                  </div>
+                  
+                  {completedTrades.map((trade) => {
+                    const ratingForm = ratingForms[trade.id] || { rating: 0, comment: '', isSubmitting: false };
+                    
+                    // Get trade party information
+                    const currentUserId = currentUser?.id;
+                    const ownerUserId = (trade as any).owner_id;
+                    const requesterUserId = (trade as any).requester_id;
+                    const ownerUser = (trade as any).owner;
+                    const requesterUser = (trade as any).requester;
+                    
+                    // Determine current user's role and the other party
+                    const isCurrentUserOwner = currentUserId === ownerUserId;
+                    const isCurrentUserRequester = currentUserId === requesterUserId;
+                    
+                    // The trade partner is the other party
+                    const tradePartner = isCurrentUserOwner ? requesterUser : ownerUser;
+                    
+                    // IMPORTANT: For rating, we need to rate the owner of the item we RECEIVED
+                    // If current user is owner -> they receive offered_item -> rate offered_item.user_id
+                    // If current user is requester -> they receive requested_item -> rate requested_item.user_id
+                    const itemWeReceived = isCurrentUserOwner ? (trade as any).offered_item : (trade as any).requested_item;
+                    const userIdToRate = itemWeReceived?.user_id;
+                    
+                    // Safety check: don't allow rating yourself
+                    const canRate = userIdToRate && userIdToRate !== currentUserId;
+                    
+                    // Check if current user has already rated this trade
+                    // Handle case where userRatings might be undefined or empty
+                    const hasRated = userRatings && userRatings.length > 0 ? userRatings.some(rating => 
+                      rating.trade_id === trade.id && 
+                      (rating.rater_id === currentUserId || rating.reviewer_id === currentUserId)
+                    ) : false;
+                    
+                    // Items are swapped in perspective
+                    const myItem = isCurrentUserOwner ? (trade as any).requested_item : (trade as any).offered_item;
+                    const theirItem = isCurrentUserOwner ? (trade as any).offered_item : (trade as any).requested_item;
+                    
+                    return (
+                      <Card key={trade.id} className="border border-green-200 bg-gradient-to-r from-green-50/50 to-emerald-50/50">
+                        <CardContent className="p-6">
+                          <div className="space-y-6">
+                            {/* Trade Header with detailed info */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                    <Handshake className="h-5 w-5 text-green-600" />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center space-x-2">
+                                    <h4 className="font-semibold text-lg">Trade Completed</h4>
+                                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                                      <ArrowRightLeft className="h-3 w-3 mr-1" />
+                                      Success
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                    <span className="flex items-center space-x-1">
+                                      <Calendar className="h-3 w-3" />
+                                      <span>Completed: {new Date((trade as any).completed_at || trade.created_at).toLocaleDateString('en-US', { 
+                                        year: 'numeric', 
+                                        month: 'long', 
+                                        day: 'numeric' 
+                                      })}</span>
+                                    </span>
+                                    <span className="flex items-center space-x-1">
+                                      <Users className="h-3 w-3" />
+                                      <span>Trade ID: {trade.id.slice(-8)}</span>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Trading Partner Info */}
+                            <div className="bg-white/60 rounded-lg p-4 border border-green-100">
+                              <div className="flex items-center justify-between mb-3">
+                                <h5 className="font-medium text-muted-foreground">Trading Partner</h5>
+                                {tradePartner && (
+                                  <div className="flex items-center space-x-2">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={tradePartner.image} alt={tradePartner.name} />
+                                      <AvatarFallback className="text-xs">
+                                        {tradePartner.name?.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="text-right">
+                                      <p className="font-medium text-sm">{tradePartner.name}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {tradePartner.loyalty_points || 0} points
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Trade Items - Detailed View */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {/* What You Gave */}
+                              {(isCurrentUserOwner ? (trade as any).requested_item : (trade as any).offered_item) && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                                      <Package className="h-3 w-3 text-red-600" />
+                                    </div>
+                                    <h5 className="font-semibold text-red-700">What You Gave</h5>
+                                  </div>
+                                  <div className="bg-red-50/80 rounded-lg p-4 border border-red-100">
+                                    <div className="flex items-start space-x-4">
+                                      {myItem?.images?.[0] && (
+                                        <div className="flex-shrink-0">
+                                          <img
+                                            src={getImageUrl(myItem.images[0].url)}
+                                            alt={myItem.title}
+                                            className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-sm"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="flex-1 space-y-2">
+                                        <h6 className="font-semibold text-lg">{myItem?.title}</h6>
+                                        <div className="flex items-center space-x-3">
+                                          <Badge variant="outline" className="text-xs">
+                                            {myItem?.category}
+                                          </Badge>
+                                          <span className="text-xs text-muted-foreground capitalize">
+                                            {myItem?.condition?.toLowerCase().replace('_', ' ')} condition
+                                          </span>
+                                        </div>
+                                        {myItem?.description && (
+                                          <p className="text-sm text-muted-foreground line-clamp-2">
+                                            {myItem.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* What You Received */}
+                              {(isCurrentUserOwner ? (trade as any).offered_item : (trade as any).requested_item) && (
+                                <div className="space-y-3">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                                      <Package className="h-3 w-3 text-green-600" />
+                                    </div>
+                                    <h5 className="font-semibold text-green-700">What You Received</h5>
+                                  </div>
+                                  <div className="bg-green-50/80 rounded-lg p-4 border border-green-100">
+                                    <div className="flex items-start space-x-4">
+                                      {theirItem?.images?.[0] && (
+                                        <div className="flex-shrink-0">
+                                          <img
+                                            src={getImageUrl(theirItem.images[0].url)}
+                                            alt={theirItem.title}
+                                            className="w-20 h-20 object-cover rounded-lg border-2 border-white shadow-sm"
+                                          />
+                                        </div>
+                                      )}
+                                      <div className="flex-1 space-y-2">
+                                        <h6 className="font-semibold text-lg">{theirItem?.title}</h6>
+                                        <div className="flex items-center space-x-3">
+                                          <Badge variant="outline" className="text-xs">
+                                            {theirItem?.category}
+                                          </Badge>
+                                          <span className="text-xs text-muted-foreground capitalize">
+                                            {theirItem?.condition?.toLowerCase().replace('_', ' ')} condition
+                                          </span>
+                                        </div>
+                                        {theirItem?.description && (
+                                          <p className="text-sm text-muted-foreground line-clamp-2">
+                                            {theirItem.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Trade Statistics */}
+                            <div className="bg-blue-50/50 rounded-lg p-4 border border-blue-100">
+                              <div className="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                  <div className="text-lg font-bold text-blue-600">
+                                    {Math.ceil(Math.abs(new Date((trade as any).completed_at || trade.created_at).getTime() - new Date(trade.created_at).getTime()) / (1000 * 60 * 60 * 24))}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Days to Complete</div>
+                                </div>
+                                <div>
+                                  <div className="text-lg font-bold text-blue-600">
+                                    {((trade as any).ratings?.length || 0)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Ratings Given</div>
+                                </div>
+                                <div>
+                                  <div className="text-lg font-bold text-blue-600">
+                                    {trade.status === 'COMPLETED' ? '✓' : '○'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Status</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Rating Section - Only show if not current user's profile and haven't rated yet and can rate */}
+                            {!isCurrentUser && !hasRated && canRate && (
+                              <div className="border-t pt-6">
+                              
+                                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+                                  <div className="text-center mb-6">
+                                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                      <Star className="h-8 w-8 text-yellow-500 fill-yellow-400" />
+                                    </div>
+                                    <h4 className="text-xl font-bold text-yellow-800 mb-2">
+                                      Rate Your Trading Experience
+                                    </h4>
+                                    <p className="text-yellow-700">
+                                      How was your experience trading with <span className="font-semibold">{tradePartner?.name}</span>?
+                                    </p>
+                                  </div>
+
+                                  {/* Rating Guidelines */}
+                                  <div className="bg-white/60 rounded-lg p-4 mb-6 border border-yellow-100">
+                                    <h5 className="font-semibold text-sm text-yellow-800 mb-2 flex items-center">
+                                      <Trophy className="h-4 w-4 mr-2" />
+                                      Rating Guidelines
+                                    </h5>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-yellow-700">
+                                      <div>⭐⭐⭐⭐⭐ Excellent - Perfect trade experience</div>
+                                      <div>⭐⭐⭐⭐ Very Good - Great communication & condition</div>
+                                      <div>⭐⭐⭐ Good - Satisfactory trade experience</div>
+                                      <div>⭐⭐ Fair - Some issues but trade completed</div>
+                                      <div>⭐ Poor - Significant problems encountered</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Star Rating */}
+                                  <div className="space-y-4">
+                                    <div className="text-center">
+                                      <p className="text-sm font-medium text-yellow-800 mb-3">Click on a star to rate:</p>
+                                      <div className="flex items-center justify-center space-x-2">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRatingForms(prev => ({
+                                              ...prev,
+                                              [trade.id]: { ...ratingForm, rating: star }
+                                            }))}
+                                            className="group relative p-3 hover:scale-110 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded-full"
+                                            disabled={ratingForm.isSubmitting}
+                                          >
+                                            <Star
+                                              className={`h-10 w-10 transition-all duration-200 ${
+                                                star <= ratingForm.rating
+                                                  ? 'text-yellow-400 fill-yellow-400 drop-shadow-sm'
+                                                  : 'text-gray-300 hover:text-yellow-300 group-hover:scale-110'
+                                              }`}
+                                            />
+                                            {/* Hover tooltip */}
+                                            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                                              {star === 1 ? 'Poor' : 
+                                               star === 2 ? 'Fair' :
+                                               star === 3 ? 'Good' :
+                                               star === 4 ? 'Very Good' : 'Excellent'}
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Rating Display */}
+                                    {ratingForm.rating > 0 && (
+                                      <div className="text-center bg-yellow-100/50 rounded-lg p-4 border border-yellow-200">
+                                        <div className="text-2xl font-bold text-yellow-600 mb-1">
+                                          {ratingForm.rating} Star{ratingForm.rating !== 1 ? 's' : ''}
+                                        </div>
+                                        <p className="text-yellow-700 font-medium">
+                                          {ratingForm.rating === 5 ? '🎉 Excellent Experience!' : 
+                                           ratingForm.rating === 4 ? '👍 Very Good Trade!' :
+                                           ratingForm.rating === 3 ? '✅ Good Trade' :
+                                           ratingForm.rating === 2 ? '⚠️ Fair Experience' : '❌ Poor Experience'}
+                                        </p>
+                                        <p className="text-xs text-yellow-600 mt-1">
+                                          Your rating helps build trust in the community
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Comment Section */}
+                                    <div className="space-y-3">
+                                      <div className="flex items-center space-x-2">
+                                        <MessageSquare className="h-4 w-4 text-yellow-600" />
+                                        <label className="text-sm font-medium text-yellow-800">
+                                          Share Your Experience {ratingForm.rating > 0 ? '(Optional)' : ''}
+                                        </label>
+                                      </div>
+                                      <Textarea
+                                        placeholder={`Tell others about your trade with ${tradePartner?.name}... Was the item as described? How was the communication? Any other feedback?`}
+                                        value={ratingForm.comment}
+                                        onChange={(e) => setRatingForms(prev => ({
+                                          ...prev,
+                                          [trade.id]: { ...ratingForm, comment: e.target.value }
+                                        }))}
+                                        disabled={ratingForm.isSubmitting}
+                                        className="min-h-[120px] bg-white/80 border-yellow-200 focus:border-yellow-400 resize-none"
+                                        maxLength={500}
+                                      />
+                                      <div className="flex justify-between items-center text-xs text-yellow-600">
+                                        <span>Help others make informed trading decisions</span>
+                                        <span>{ratingForm.comment.length}/500</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Submit Button */}
+                                    <div className="flex flex-col items-center space-y-3 pt-4">
+                                      <Button
+                                        onClick={() => handleSubmitRating(trade.id, userIdToRate)}
+                                        disabled={ratingForm.rating === 0 || ratingForm.isSubmitting}
+                                        className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        size="lg"
+                                      >
+                                        {ratingForm.isSubmitting ? (
+                                          <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                            Submitting Your Rating...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Send className="h-5 w-5 mr-2" />
+                                            Submit {ratingForm.rating} Star Rating
+                                            {ratingForm.rating > 0 && tradePartner && (
+                                              <span className="ml-1 text-yellow-100">
+                                                (+{ratingForm.rating * 5} loyalty points for {tradePartner.name})
+                                              </span>
+                                            )}
+                                          </>
+                                        )}
+                                      </Button>
+                                      
+                                      {ratingForm.rating === 0 && (
+                                        <p className="text-sm text-yellow-600 text-center">
+                                          👆 Please select a star rating above to submit your review
+                                        </p>
+                                      )}
+                                      
+                                      {ratingForm.rating > 0 && (
+                                        <div className="text-center">
+                                          <p className="text-xs text-yellow-700">
+                                            🎁 {tradePartner?.name} will earn <span className="font-bold">{ratingForm.rating * 5} loyalty points</span> from your rating!
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Show if already rated */}
+                            {!isCurrentUser && hasRated && (
+                              <div className="border-t pt-6">
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                                  <div className="text-center">
+                                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                      <Star className="h-8 w-8 text-green-600 fill-green-500" />
+                                    </div>
+                                    <h4 className="text-xl font-bold text-green-800 mb-2">
+                                      Rating Submitted Successfully!
+                                    </h4>
+                                    <div className="flex items-center justify-center space-x-2 text-green-700 mb-3">
+                                      <Trophy className="h-5 w-5" />
+                                      <span className="font-medium">
+                                        You've already rated your experience with {tradePartner?.name}
+                                      </span>
+                                    </div>
+                                    <div className="bg-white/60 rounded-lg p-4 border border-green-100">
+                                      <p className="text-sm text-green-700 flex items-center justify-center space-x-2">
+                                        <span>✅ Thank you for helping build trust in our trading community!</span>
+                                      </p>
+                                      <p className="text-xs text-green-600 mt-2">
+                                        🎁 Your rating contributed loyalty points to {tradePartner?.name}'s account
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Handshake className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No Completed Trades</h3>
+                  <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+                    {isCurrentUser 
+                      ? 'You haven\'t completed any trades yet. Start trading with other users to build your reputation and earn loyalty points!' 
+                      : 'This user hasn\'t completed any trades yet. Check back later to see their trading history.'
+                    }
+                  </p>
+                  {isCurrentUser && (
+                    <div className="mt-4">
+                      <Badge variant="outline" className="text-xs">
+                        💡 Tip: Complete trades to earn loyalty points and build trust
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             {/* Rating Tab */}

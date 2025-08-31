@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useItems, useDeleteItem } from '@/hooks/useItems';
+import { useItemsByUser, useDeleteItem } from '@/hooks/useItems';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,17 +28,17 @@ export const MyItemsModal: React.FC<MyItemsModalProps> = ({
   const { user } = useAuth();
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   
-  // Fetch all items and filter by current user
+  // Fetch user's items using the new dedicated endpoint
   const { 
-    data: allItems = [], 
+    data: userItemsData, 
     isLoading: itemsLoading, 
     error: itemsError,
-  } = useItems();
+  } = useItemsByUser(user?.id || '');
 
   const deleteItemMutation = useDeleteItem();
 
-  // Filter items to show only current user's items
-  const myItems = allItems.filter(item => item.user.id === user?.id);
+  // Extract items from the response data
+  const myItems = userItemsData?.items || [];
 
   const handleDeleteItem = async (itemId: string, itemTitle: string) => {
     if (!confirm(`Are you sure you want to delete "${itemTitle}"? This action cannot be undone.`)) {

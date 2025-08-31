@@ -41,6 +41,15 @@ class RatingService {
     throw new Error(response.message || 'Failed to get user ratings');
   }
 
+  // Get ratings given BY a specific user (for checking if they've already rated)
+  async getRatingsByUser(userId: string): Promise<Rating[]> {
+    const response = await apiClient.get<Rating[]>(`/ratings/by-user/${userId}`);
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to get ratings by user');
+  }
+
   // Get user's rating statistics
   async getUserRatingStats(userId: string): Promise<RatingStats> {
     const response = await apiClient.get<RatingStats>(`/ratings/stats/${userId}`);
