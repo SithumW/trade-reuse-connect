@@ -1,52 +1,76 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Recycle, Mail, Lock, User, MapPin, ArrowLeft } from "lucide-react";
+import { Recycle, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
-interface AuthProps {
-  onLogin?: (user: any) => void;
-  onBack?: () => void;
-}
-
-export const Auth = ({ onLogin, onBack }: AuthProps) => {
+export const Auth = () => {
+  const navigate = useNavigate();
+  const { login, register, isLoading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
-    location: ""
+    confirmPassword: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError("");
 
-    // Simulate API call
-    setTimeout(() => {
-      if (formData.email && formData.password) {
-        // Mock successful login/signup
-        const mockUser = {
-          name: formData.name || "John Doe",
-          email: formData.email,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${formData.email}`,
-          badge: "bronze" as const,
-          points: 0,
-          location: formData.location || "New York, NY"
-        };
-        onLogin?.(mockUser);
-      } else {
-        setError("Please fill in all required fields");
+    // Validation
+    if (!formData.email || !formData.password) {
+      setError("Email and password are required");
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!isLogin) {
+      if (!formData.name || formData.name.length < 2) {
+        setError("Name must be at least 2 characters long");
+        return;
       }
-      setIsLoading(false);
-    }, 1000);
+      
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long");
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+    }
+
+    try {
+      if (isLogin) {
+        console.log('[Auth] Attempting login...');
+        await login(formData.email.trim(), formData.password);
+      } else {
+        console.log('[Auth] Attempting registration...');
+        await register(formData.name.trim(), formData.email.trim(), formData.password);
+      }
+      navigate('/marketplace');
+    } catch (error: any) {
+      console.error('[Auth] Authentication error:', error);
+      const errorMessage = error.message || 'Something went wrong. Please try again.';
+      setError(errorMessage);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -54,20 +78,22 @@ export const Auth = ({ onLogin, onBack }: AuthProps) => {
     setError("");
   };
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Back Button */}
-        {onBack && (
-          <Button 
-            variant="ghost" 
-            onClick={onBack}
-            className="mb-6 text-primary-foreground hover:bg-primary-foreground/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Button>
-        )}
+        <Button 
+          variant="ghost" 
+          onClick={handleBack}
+          className="mb-6 text-primary-foreground hover:bg-primary-foreground/10"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
 
         <Card className="shadow-strong">
           <CardHeader className="text-center space-y-4">
@@ -110,6 +136,8 @@ export const Auth = ({ onLogin, onBack }: AuthProps) => {
                       onChange={(e) => handleInputChange("name", e.target.value)}
                       className="pl-10"
                       required={!isLogin}
+                      minLength={2}
+                      maxLength={50}
                     />
                   </div>
                 </div>
@@ -138,26 +166,27 @@ export const Auth = ({ onLogin, onBack }: AuthProps) => {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={isLogin ? "Enter your password" : "Create a password (min 6 characters)"}
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
                     className="pl-10"
                     required
+                    minLength={isLogin ? undefined : 6}
                   />
                 </div>
               </div>
 
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
-                      id="location"
-                      type="text"
-                      placeholder="City, State"
-                      value={formData.location}
-                      onChange={(e) => handleInputChange("location", e.target.value)}
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirm your password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                       className="pl-10"
                       required={!isLogin}
                     />
@@ -176,9 +205,15 @@ export const Auth = ({ onLogin, onBack }: AuthProps) => {
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
               </p>
               <Button
+                type="button"
                 variant="link"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setFormData({ email: "", password: "", name: "", confirmPassword: "" });
+                }}
                 className="p-0 h-auto font-medium"
+                disabled={isLoading}
               >
                 {isLogin ? "Sign up for free" : "Sign in instead"}
               </Button>

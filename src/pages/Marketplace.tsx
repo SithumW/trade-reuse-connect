@@ -1,9 +1,14 @@
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useItems } from "@/hooks/useItems";
 import { Header } from "@/components/Header";
 import { ItemCard } from "@/components/ItemCard";
+import { PostItemModal } from "@/components/PostItemModal";
+import { MyItemsModal } from "@/components/MyItemsModal";
+import { MyTradesModal } from "@/components/MyTradesModal";
+import { ItemDetailsModal } from "@/components/ItemDetailsModal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
@@ -12,133 +17,46 @@ import {
   Grid3X3,
   List,
   TrendingUp,
-  MapPin
+  Package,
 } from "lucide-react";
-
-interface MarketplaceProps {
-  user?: {
-    name: string;
-    avatar?: string;
-    badge: "bronze" | "silver" | "gold" | "diamond" | "ruby";
-    points: number;
-  };
-  onLogout?: () => void;
-  onPostItem?: () => void;
-}
-
-// Mock data for demonstration
-const mockItems = [
-  {
-    id: "1",
-    title: "MacBook Pro 13-inch 2020",
-    description: "Excellent condition MacBook Pro with original charger and box. Perfect for students or professionals.",
-    category: "Electronics",
-    condition: "like-new" as const,
-    images: ["https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400&h=400&fit=crop"],
-    location: "Downtown, NYC",
-    postedAt: "2024-01-15T10:00:00Z",
-    owner: {
-      name: "Sarah Chen",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sarah",
-      badge: "gold" as const,
-      rating: 4.8
-    },
-    tradeRequests: 12
-  },
-  {
-    id: "2", 
-    title: "Vintage Leather Armchair",
-    description: "Beautiful vintage leather armchair in great condition. Adds character to any room.",
-    category: "Furniture",
-    condition: "good" as const,
-    images: ["https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&h=400&fit=crop"],
-    location: "Brooklyn, NYC",
-    postedAt: "2024-01-14T15:30:00Z",
-    owner: {
-      name: "Mike Johnson",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mike",
-      badge: "silver" as const,
-      rating: 4.5
-    },
-    tradeRequests: 8
-  },
-  {
-    id: "3",
-    title: "Nintendo Switch Console",
-    description: "Nintendo Switch with extra Joy-Con controllers and popular games included.",
-    category: "Electronics",
-    condition: "good" as const,
-    images: ["https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop"],
-    location: "Queens, NYC",
-    postedAt: "2024-01-13T09:15:00Z",
-    owner: {
-      name: "Alex Rivera",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-      badge: "bronze" as const,
-      rating: 4.2
-    },
-    tradeRequests: 15
-  },
-  {
-    id: "4",
-    title: "Canon EOS Camera",
-    description: "Professional DSLR camera with multiple lenses. Perfect for photography enthusiasts.",
-    category: "Electronics", 
-    condition: "like-new" as const,
-    images: ["https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=400&h=400&fit=crop"],
-    location: "Manhattan, NYC",
-    postedAt: "2024-01-12T14:20:00Z",
-    owner: {
-      name: "Emma Davis",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emma",
-      badge: "diamond" as const,
-      rating: 4.9
-    },
-    tradeRequests: 6
-  },
-  {
-    id: "5",
-    title: "Designer Bookshelf",
-    description: "Modern minimalist bookshelf in excellent condition. Perfect for any home office.",
-    category: "Furniture",
-    condition: "new" as const,
-    images: ["https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?w=400&h=400&fit=crop"],
-    location: "Bronx, NYC",
-    postedAt: "2024-01-11T11:45:00Z",
-    owner: {
-      name: "David Park",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=david",
-      badge: "ruby" as const,
-      rating: 5.0
-    },
-    tradeRequests: 3
-  },
-  {
-    id: "6",
-    title: "Yoga Mat & Accessories",
-    description: "Premium yoga mat with blocks, strap, and carrying bag. Barely used.",
-    category: "Sports & Fitness",
-    condition: "like-new" as const,
-    images: ["https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop"],
-    location: "Staten Island, NYC",
-    postedAt: "2024-01-10T16:30:00Z",
-    owner: {
-      name: "Lisa Wong",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=lisa",
-      badge: "gold" as const,
-      rating: 4.7
-    },
-    tradeRequests: 9
-  }
-];
+import { toast } from "sonner";
+import { formatLocation, generateAvatar } from "@/utils/helpers";
+import { calculateDistance, formatDistance } from "@/utils/location";
+import { getImageUrl } from "@/config/env";
 
 const categories = ["All", "Electronics", "Furniture", "Clothing", "Books", "Sports & Fitness", "Home & Garden", "Toys & Games"];
 
-export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) => {
+export const Marketplace = () => {
+  const { user, logout, userLocation, hasLocation } = useAuth();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
+  const [searchTerm, setSearchTerm] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [isMyItemsModalOpen, setIsMyItemsModalOpen] = useState(false);
+  const [isMyTradesModalOpen, setIsMyTradesModalOpen] = useState(false);
+  const [selectedItemForDetails, setSelectedItemForDetails] = useState<any>(null);
+  const [isItemDetailsModalOpen, setIsItemDetailsModalOpen] = useState(false);
+
+  // Fetch items from API using custom hook
+  const { 
+    data: items = [], 
+    isLoading: itemsLoading, 
+    error: itemsError,
+  } = useItems({
+    category: selectedCategory !== "All" ? selectedCategory : undefined,
+    search: searchTerm.trim() || undefined,
+  });
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   const handleFavorite = (itemId: string) => {
     setFavorites(prev => 
@@ -146,23 +64,137 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
         ? prev.filter(id => id !== itemId)
         : [...prev, itemId]
     );
+    // TODO: Implement API call to save favorites
   };
 
   const handleTradeRequest = (itemId: string) => {
-    // This would typically open a trade request modal
+    // TODO: Navigate to trade request modal/page
+    toast.info("Trade request feature coming soon!");
     console.log("Trade request for item:", itemId);
   };
 
-  const filteredItems = mockItems.filter(item => 
-    selectedCategory === "All" || item.category === selectedCategory
-  );
+  const handleMoreInfo = (displayItem: any) => {
+    console.log('handleMoreInfo called with:', displayItem);
+    // Find the original API item to get all the data we need
+    const apiItem = items.find(item => item.id === displayItem.id);
+    console.log('Found API item:', apiItem);
+    if (!apiItem) return;
+
+    // Transform API item to match ItemDetailsModal expected structure
+    const transformedItem = {
+      id: apiItem.id,
+      title: apiItem.title,
+      description: apiItem.description,
+      category: apiItem.category,
+      condition: (apiItem.condition || 'GOOD').toLowerCase(),
+      images: apiItem.images?.map(img => getImageUrl(img.url)) || [],
+      location: displayItem.location, // Use the formatted location from display
+      postedAt: apiItem.posted_at,
+      latitude: apiItem.latitude,
+      longitude: apiItem.longitude,
+      user: {
+        id: apiItem.user.id,
+        name: apiItem.user.name,
+        image: apiItem.user.image || generateAvatar(apiItem.user.email),
+        email: apiItem.user.email,
+        badge: (apiItem.user.badge || 'BRONZE').toUpperCase(), // Keep uppercase for modal
+        rating: 4.5 // TODO: Get from API
+      },
+      tradeRequests: apiItem._count?.trade_requests_for || 0
+    };
+
+    console.log('Transformed item for modal:', transformedItem);
+    setSelectedItemForDetails(transformedItem);
+    setIsItemDetailsModalOpen(true);
+  };
+
+  const handlePostItem = () => {
+    setIsPostModalOpen(true);
+  };
+
+  const handleMyTrades = () => {
+    setIsMyTradesModalOpen(true);
+  };
+
+  const handlePostSuccess = () => {
+    // Refresh items list after successful post
+    // The useItems hook should automatically refetch via query invalidation
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  // Get badge color based on user badge
+  const getBadgeColorClass = (badge: string) => {
+    switch (badge.toUpperCase()) {
+      case 'BRONZE': return 'bg-amber-600';
+      case 'SILVER': return 'bg-gray-400';
+      case 'GOLD': return 'bg-yellow-500';
+      case 'DIAMOND': return 'bg-blue-400';
+      case 'RUBY': return 'bg-red-500';
+      default: return 'bg-amber-600';
+    }
+  };
+
+  // Get count of user's items for display
+  const myItemsCount = items.filter(item => item.user.id === user?.id).length;
+
+  // Filter and sort items
+  const filteredItems = items.filter(item => {
+    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+    const matchesSearch = !searchTerm || 
+      (item.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        return new Date(b.posted_at).getTime() - new Date(a.posted_at).getTime();
+      case 'oldest':
+        return new Date(a.posted_at).getTime() - new Date(b.posted_at).getTime();
+      case 'popular':
+        return (b._count?.trade_requests_for || 0) - (a._count?.trade_requests_for || 0);
+      case 'distance':
+        if (!userLocation) return 0;
+        const distanceA = calculateDistance(
+          userLocation.latitude, 
+          userLocation.longitude,
+          a.latitude,
+          a.longitude
+        );
+        const distanceB = calculateDistance(
+          userLocation.latitude, 
+          userLocation.longitude,
+          b.latitude,
+          b.longitude
+        );
+        return distanceA - distanceB;
+      default:
+        return 0;
+    }
+  });
+
+  // Show error if items failed to load
+  if (itemsError) {
+    console.error("Failed to load items:", itemsError);
+    toast.error("Failed to load items. Please try again.");
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Header 
-        user={user} 
-        onLogoutClick={onLogout}
-        onPostItemClick={onPostItem}
+        user={user ? {
+          name: user.name || 'Unknown User',
+          avatar: user.image || generateAvatar(user.email || ''),
+          badge: (user.badge || 'BRONZE').toLowerCase() as any,
+          points: user.loyalty_points || 0
+        } : undefined} 
+        onLogoutClick={handleLogout}
+        onPostItemClick={handlePostItem}
+        onMyTradesClick={handleMyTrades}
       />
 
       <main className="container mx-auto px-4 py-8">
@@ -174,13 +206,25 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
           <p className="text-muted-foreground">
             Discover amazing items from your community and find your next treasure.
           </p>
+          {user && (
+            <div className="mt-4 flex items-center gap-4">
+              <div className={`px-3 py-1 rounded-full text-white text-sm font-medium ${getBadgeColorClass(user.badge || 'BRONZE')}`}>
+                {user.badge || 'BRONZE'} Trader
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {user.loyalty_points} loyalty points
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{mockItems.length}</div>
+              <div className="text-2xl font-bold text-primary">
+                {itemsLoading ? "..." : items.length}
+              </div>
               <div className="text-sm text-muted-foreground">Available Items</div>
             </CardContent>
           </Card>
@@ -192,7 +236,9 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-warning">18</div>
+              <div className="text-2xl font-bold text-warning">
+                {user?.loyalty_points || 0}
+              </div>
               <div className="text-sm text-muted-foreground">Your Points</div>
             </CardContent>
           </Card>
@@ -212,6 +258,17 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
               <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                {/* Search */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search</label>
+                  <Input
+                    placeholder="Search items..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="w-full sm:w-48"
+                  />
+                </div>
+
                 {/* Category Filter */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Category</label>
@@ -240,7 +297,7 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
                       <SelectItem value="newest">Newest First</SelectItem>
                       <SelectItem value="oldest">Oldest First</SelectItem>
                       <SelectItem value="popular">Most Popular</SelectItem>
-                      <SelectItem value="location">Near Me</SelectItem>
+                      {hasLocation && <SelectItem value="distance">Nearest First</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -265,34 +322,87 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
                   </Button>
                 </div>
                 
-                <Button onClick={onPostItem} className="shrink-0">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Post Item
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setIsMyItemsModalOpen(true)} 
+                    variant="outline" 
+                    className="shrink-0"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    My Items ({myItemsCount})
+                  </Button>
+                  
+                  <Button onClick={handlePostItem} className="shrink-0">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Post Item
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Loading State */}
+        {itemsLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading items...</p>
+            </div>
+          </div>
+        )}
+
         {/* Items Grid */}
-        <div className={`grid gap-6 ${
-          viewMode === "grid" 
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-            : "grid-cols-1"
-        }`}>
-          {filteredItems.map(item => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              onTradeRequest={handleTradeRequest}
-              onFavorite={handleFavorite}
-              isFavorited={favorites.includes(item.id)}
-            />
-          ))}
-        </div>
+        {!itemsLoading && (
+          <div className={`grid gap-6 ${
+            viewMode === "grid" 
+              ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+              : "grid-cols-1"
+          }`}>
+            {sortedItems.map(item => {
+              // Calculate distance if user has location
+              let locationDisplay = formatLocation(item.latitude, item.longitude);
+              if (userLocation && hasLocation) {
+                const distance = calculateDistance(
+                  userLocation.latitude, 
+                  userLocation.longitude,
+                  item.latitude,
+                  item.longitude
+                );
+                locationDisplay = formatDistance(distance);
+              }
+
+              return (
+                <ItemCard
+                  key={item.id}
+                  item={{
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    category: item.category,
+                    condition: (item.condition || 'GOOD').toLowerCase() as any,
+                    images: item.images?.map(img => getImageUrl(img.url)) || [],
+                    location: locationDisplay,
+                    postedAt: item.posted_at,
+                    owner: {
+                      name: item.user.name,
+                      avatar: item.user.image || generateAvatar(item.user.email),
+                      badge: (item.user.badge || 'BRONZE').toLowerCase() as any,
+                      rating: 4.5 // TODO: Get from API
+                    },
+                    tradeRequests: item._count?.trade_requests_for || 0
+                  }}
+                  onMoreInfo={handleMoreInfo}
+                  onFavorite={handleFavorite}
+                  isFavorited={favorites.includes(item.id)}
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredItems.length === 0 && (
+        {!itemsLoading && sortedItems.length === 0 && (
           <Card className="py-16">
             <CardContent className="text-center">
               <div className="mb-4">
@@ -300,15 +410,51 @@ export const Marketplace = ({ user, onLogout, onPostItem }: MarketplaceProps) =>
               </div>
               <h3 className="text-lg font-semibold mb-2">No items found</h3>
               <p className="text-muted-foreground mb-4">
-                Try adjusting your filters or check back later for new items.
+                {searchTerm ? 
+                  `No items match your search "${searchTerm}". Try different keywords.` :
+                  "Try adjusting your filters or check back later for new items."
+                }
               </p>
-              <Button onClick={() => setSelectedCategory("All")} variant="outline">
+              <Button 
+                onClick={() => {
+                  setSelectedCategory("All");
+                  setSearchTerm("");
+                }} 
+                variant="outline"
+              >
                 Clear Filters
               </Button>
             </CardContent>
           </Card>
         )}
       </main>
+
+      {/* Post Item Modal */}
+      <PostItemModal
+        isOpen={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+        onSuccess={handlePostSuccess}
+      />
+
+      {/* My Items Modal */}
+      <MyItemsModal
+        isOpen={isMyItemsModalOpen}
+        onClose={() => setIsMyItemsModalOpen(false)}
+      />
+
+      {/* My Trades Modal */}
+      <MyTradesModal
+        isOpen={isMyTradesModalOpen}
+        onClose={() => setIsMyTradesModalOpen(false)}
+        onViewItem={handleMoreInfo}
+      />
+
+      {/* Item Details Modal */}
+      <ItemDetailsModal
+        isOpen={isItemDetailsModalOpen}
+        onClose={() => setIsItemDetailsModalOpen(false)}
+        item={selectedItemForDetails}
+      />
     </div>
   );
 };

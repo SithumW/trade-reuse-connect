@@ -32,9 +32,37 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Set up environment variables.
+cp .env.example .env
+# Edit .env with your local configuration
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+
+## Environment Variables
+
+This project uses environment variables for configuration. Copy `.env.example` to `.env` and update the values:
+
+```bash
+# Backend API Configuration
+VITE_API_BASE_URL=http://localhost:3000
+VITE_API_ENDPOINT=http://localhost:3000/api
+
+# External Services
+VITE_AVATAR_API_URL=https://api.dicebear.com/7.x/avataaars/svg
+
+# Environment
+VITE_NODE_ENV=development
+```
+
+### Environment Files
+
+- `.env` - Local development (git-ignored)
+- `.env.example` - Template for development
+- `.env.production.example` - Template for production
+
+**Important**: Never commit `.env` files to version control. They contain sensitive configuration data.
 
 **Edit a file directly in GitHub**
 
