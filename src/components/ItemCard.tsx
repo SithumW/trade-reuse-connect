@@ -2,12 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ProfileModal from "@/components/ProfileModal";
 import { 
   Heart,
   MessageCircle,
   MapPin,
   Clock,
-  Star
+  Star,
+  Info
 } from "lucide-react";
 
 interface ItemCardProps {
@@ -21,6 +23,7 @@ interface ItemCardProps {
     location: string;
     postedAt: string;
     owner: {
+      id?: string;
       name: string;
       avatar?: string;
       badge: "bronze" | "silver" | "gold" | "diamond" | "ruby";
@@ -28,7 +31,7 @@ interface ItemCardProps {
     };
     tradeRequests?: number;
   };
-  onTradeRequest?: (itemId: string) => void;
+  onMoreInfo?: (item: any) => void;
   onFavorite?: (itemId: string) => void;
   isFavorited?: boolean;
 }
@@ -50,7 +53,7 @@ const badgeColors = {
 
 export const ItemCard = ({ 
   item, 
-  onTradeRequest, 
+  onMoreInfo, 
   onFavorite, 
   isFavorited = false 
 }: ItemCardProps) => {
@@ -121,16 +124,32 @@ export const ItemCard = ({
 
         {/* Owner Info */}
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="flex items-center space-x-2">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={item.owner.avatar} alt={item.owner.name} />
-              <AvatarFallback className="text-xs">
-                {item.owner.name.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{item.owner.name}</span>
-            <div className={`w-2 h-2 rounded-full ${badgeColors[item.owner.badge]}`} />
-          </div>
+          <ProfileModal
+            user={{
+              id: item.owner.id || '',
+              name: item.owner.name,
+              email: '',
+              image: item.owner.avatar,
+              badge: item.owner.badge.toUpperCase() as any,
+              loyalty_points: 0, // Will be fetched from API
+              createdAt: '',
+              updatedAt: ''
+            }}
+            trigger={
+              <Button variant="ghost" size="sm" className="h-auto p-1 -ml-1 hover:bg-muted/50">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={item.owner.avatar} alt={item.owner.name} />
+                    <AvatarFallback className="text-xs">
+                      {item.owner.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{item.owner.name}</span>
+                  <div className={`w-2 h-2 rounded-full ${badgeColors[item.owner.badge]}`} />
+                </div>
+              </Button>
+            }
+          />
           
           <div className="flex items-center space-x-1 text-xs">
             <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -141,12 +160,12 @@ export const ItemCard = ({
 
       <CardFooter className="p-4 pt-0">
         <Button 
-          onClick={() => onTradeRequest?.(item.id)}
+          onClick={() => onMoreInfo?.(item)}
           className="w-full"
           variant="default"
         >
-          <MessageCircle className="h-4 w-4 mr-2" />
-          Request Trade
+          <Info className="h-4 w-4 mr-2" />
+          More Info
         </Button>
       </CardFooter>
     </Card>

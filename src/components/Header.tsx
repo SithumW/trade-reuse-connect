@@ -2,25 +2,35 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ProfileModal from "@/components/ProfileModal";
+import { Trade, Rating } from "@/types/api";
 import { 
   LogOut, 
   Plus, 
   Search, 
   Menu,
   X,
-  Recycle
+  Recycle,
+  ArrowRightLeft
 } from "lucide-react";
 
 interface HeaderProps {
   user?: {
+    id: string; // Add user ID
     name: string;
     avatar?: string;
     badge: "bronze" | "silver" | "gold" | "diamond" | "ruby";
     points: number;
   };
+  completedTrades?: Trade[];
+  userRatings?: Rating[];
+  userGivenRatings?: Rating[]; // Ratings given by the current user
+  onFetchProfileData?: (userId: string) => void;
   onLoginClick?: () => void;
   onLogoutClick?: () => void;
   onPostItemClick?: () => void;
+  onMyItemsClick?: () => void;
+  onMyTradesClick?: () => void;
 }
 
 const badgeConfig = {
@@ -31,7 +41,18 @@ const badgeConfig = {
   ruby: { label: "Ruby Trader", color: "bg-red-500" }
 };
 
-export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick }: HeaderProps) => {
+export const Header = ({ 
+  user, 
+  completedTrades,
+  userRatings,
+  userGivenRatings,
+  onFetchProfileData,
+  onLoginClick, 
+  onLogoutClick, 
+  onPostItemClick, 
+  onMyItemsClick, 
+  onMyTradesClick 
+}: HeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
@@ -66,6 +87,11 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick }: H
                 Post Item
               </Button>
               
+              <Button onClick={onMyTradesClick} variant="outline" size="sm">
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                My Trades
+              </Button>
+              
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <div className="flex items-center space-x-2">
@@ -77,10 +103,21 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick }: H
                   <div className="text-xs text-muted-foreground">{user.points} points</div>
                 </div>
                 
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <ProfileModal 
+                  userId={user.id}
+                  isCurrentUser={true}
+                  completedTrades={completedTrades}
+                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
+                  onFetchProfileData={onFetchProfileData}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  }
+                />
                 
                 <Button onClick={onLogoutClick} variant="ghost" size="sm">
                   <LogOut className="h-4 w-4" />
@@ -122,10 +159,21 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick }: H
           {user ? (
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
+                <ProfileModal 
+                  userId={user.id}
+                  isCurrentUser={true}
+                  completedTrades={completedTrades}
+                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
+                  onFetchProfileData={onFetchProfileData}
+                  trigger={
+                    <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  }
+                />
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-medium">{user.name}</span>
@@ -140,6 +188,11 @@ export const Header = ({ user, onLoginClick, onLogoutClick, onPostItemClick }: H
               <Button onClick={onPostItemClick} variant="default" className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
                 Post Item
+              </Button>
+              
+              <Button onClick={onMyTradesClick} variant="outline" className="w-full">
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                My Trades
               </Button>
               
               <Button onClick={onLogoutClick} variant="outline" className="w-full">

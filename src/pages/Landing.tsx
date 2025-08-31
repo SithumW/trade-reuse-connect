@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { Button } from "@/components/ui/button";
@@ -12,16 +12,22 @@ import {
   CheckCircle
 } from "lucide-react";
 
-interface LandingProps {
-  onGetStarted?: () => void;
-}
+export const Landing = () => {
+  const navigate = useNavigate();
 
-export const Landing = ({ onGetStarted }: LandingProps) => {
+  const handleGetStarted = () => {
+    navigate('/auth');
+  };
+1
+  const handleLogin = () => {
+    navigate('/auth');
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <Header onLoginClick={onGetStarted} />
+      <Header onLoginClick={handleLogin} />
       
-      <Hero onGetStarted={onGetStarted} />
+      <Hero onGetStarted={handleGetStarted} />
       
       {/* How It Works Section */}
       <section className="py-20 bg-muted/30">
@@ -130,7 +136,7 @@ export const Landing = ({ onGetStarted }: LandingProps) => {
             Join thousands of community members already trading, saving money, and reducing waste.
           </p>
           <Button 
-            onClick={onGetStarted}
+            onClick={handleGetStarted}
             size="lg" 
             className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-medium"
           >
