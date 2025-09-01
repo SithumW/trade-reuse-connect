@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useItems } from '@/hooks/useItems';
+import { useItemsByUser } from '@/hooks/useItems';
 import { useCreateTradeRequest } from '@/hooks/useTradeRequests';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,9 +53,9 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   // Trade request mutation
   const createTradeRequestMutation = useCreateTradeRequest();
 
-  // Fetch user's own items for trade selection
-  const { data: allItems = [] } = useItems();
-  const myItems = allItems.filter(myItem => myItem.user.id === user?.id && myItem.id !== item?.id);
+  // Fetch user's own items for trade selection using the dedicated endpoint
+  const { data: userItemsData } = useItemsByUser(user?.id || '');
+  const myItems = userItemsData?.items?.filter(myItem => myItem.id !== item?.id) || [];
 
   // Reset state when modal opens/closes
   useEffect(() => {
