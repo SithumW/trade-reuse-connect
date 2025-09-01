@@ -676,12 +676,12 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
 
             {/* View Item button - always show for all requests */}
             <Button
-              onClick={() => handleViewItem(isReceived ? theirItem : theirItem)}
+              onClick={() => handleViewItem(theirItem)}
               variant="outline"
               size="sm"
             >
               <Eye className="h-4 w-4 mr-2" />
-              View Item
+              View Their Item
             </Button>
           </div>
         </CardContent>

@@ -84,8 +84,9 @@ export const RatingModal: React.FC<RatingModalProps> = ({
         reviewee_id: tradePartner.id,
         rating: rating,
         comment: trimmedComment.length > 0 ? trimmedComment : null
+        
       };
-
+      console.log(comment);
       console.log('Submitting rating:', ratingData);
       console.log('Current user:', currentUser?.id);
       console.log('API base URL:', config.api.baseUrl);
