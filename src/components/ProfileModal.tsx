@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getImageUrl } from "@/config/env";
+import "@/styles/ProfileModal.css";
 
 interface ProfileModalProps {
   userId?: string;
@@ -148,24 +149,26 @@ const ProfileModal = ({
     const config = badgeConfig[badge as keyof typeof badgeConfig];
     if (!config) return null;
 
+    const badgeColorClass = `badge-${badge.toLowerCase()}`;
+
     return (
-      <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border">
-        <div className="text-3xl">{config.icon}</div>
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-1">
-            <Badge className={`${config.color} text-white font-semibold`}>
+      <div className="profile-badge-info">
+        <div className="profile-badge-icon">{config.icon}</div>
+        <div className="profile-badge-content">
+          <div className="profile-badge-header">
+            <Badge className={`profile-badge ${badgeColorClass}`}>
               {config.label}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{config.description}</p>
+          <p className="profile-badge-description">{config.description}</p>
         </div>
       </div>
     );
   };
 
   const defaultTrigger = (
-    <Button variant="ghost" size="sm" className="h-auto p-0">
-      <Avatar className="h-8 w-8">
+    <Button variant="ghost" size="sm" className="profile-default-trigger">
+      <Avatar className="profile-default-avatar">
         <AvatarImage src={displayUser?.image} alt={displayUser?.name} />
         <AvatarFallback>
           {displayUser?.name?.slice(0, 2).toUpperCase() || '??'}
@@ -261,9 +264,9 @@ const ProfileModal = ({
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="profile-modal-content">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+          <DialogTitle className="profile-modal-header">
             <UserIcon className="h-5 w-5" />
             <span>
               {isCurrentUser ? 'Your Profile' : `${displayUser?.name || 'User'}'s Profile`}
@@ -277,32 +280,32 @@ const ProfileModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="profile-modal-space-y-6">
           {/* Basic Info */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <Avatar className="h-16 w-16">
+            <CardContent className="profile-basic-info-card">
+              <div className="profile-basic-info-content">
+                <Avatar className="profile-avatar-large">
                   <AvatarImage 
                     src={profile?.image || displayUser?.image} 
                     alt={profile?.name || displayUser?.name} 
                   />
-                  <AvatarFallback className="text-lg">
+                  <AvatarFallback className="profile-avatar-fallback">
                     {(profile?.name || displayUser?.name)?.slice(0, 2).toUpperCase() || '??'}
                   </AvatarFallback>
                 </Avatar>
                 
-                <div className="flex-1 space-y-3">
+                <div className="profile-info-section">
                   <div>
-                    <h3 className="text-xl font-semibold">
+                    <h3 className="profile-name">
                       {isLoading ? (
-                        <Skeleton className="h-6 w-48" />
+                        <Skeleton className="profile-skeleton" />
                       ) : (
                         profile?.name || displayUser?.name || 'Unknown User'
                       )}
                     </h3>
                     {(profile?.email || displayUser?.email) && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="profile-email">
                         {profile?.email || displayUser?.email}
                       </p>
                     )}
@@ -317,7 +320,7 @@ const ProfileModal = ({
 
                   {/* Join Date */}
                   {profile?.createdAt && (
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <div className="profile-join-date">
                       <Calendar className="h-4 w-4" />
                       <span>Member since {formatJoinDate(profile.createdAt)}</span>
                     </div>
@@ -327,16 +330,16 @@ const ProfileModal = ({
 
               {/* Bio */}
               {profile?.bio && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm">{profile.bio}</p>
+                <div className="profile-bio">
+                  <p className="profile-bio-text">{profile.bio}</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Stats & Details */}
-          <Tabs defaultValue="stats" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="stats" className="profile-tabs">
+            <TabsList className="profile-tabs-list">
               <TabsTrigger value="stats">Statistics</TabsTrigger>
               <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="rating">Rating</TabsTrigger>
@@ -344,68 +347,68 @@ const ProfileModal = ({
 
             {/* Statistics Tab */}
             <TabsContent value="stats" className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="profile-stats-grid">
                 <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="flex items-center justify-center mb-2">
+                  <CardContent className="profile-stat-card">
+                    <div className="profile-stat-icon">
                       <Trophy className="h-5 w-5 text-warning" />
                     </div>
                     {isLoading ? (
-                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                      <Skeleton className="profile-stat-skeleton" />
                     ) : (
-                      <div className="text-2xl font-bold text-warning">
+                      <div className="profile-stat-value text-warning">
                         {profile?.loyalty_points || displayUser?.loyalty_points || 0}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Points</div>
+                    <div className="profile-stat-label">Points</div>
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="flex items-center justify-center mb-2">
+                  <CardContent className="profile-stat-card">
+                    <div className="profile-stat-icon">
                       <Package className="h-5 w-5 text-primary" />
                     </div>
                     {isLoading ? (
-                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                      <Skeleton className="profile-stat-skeleton" />
                     ) : (
-                      <div className="text-2xl font-bold text-primary">
+                      <div className="profile-stat-value text-primary">
                         {profile?._count?.items || 0}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Items</div>
+                    <div className="profile-stat-label">Items</div>
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="flex items-center justify-center mb-2">
+                  <CardContent className="profile-stat-card">
+                    <div className="profile-stat-icon">
                       <Handshake className="h-5 w-5 text-success" />
                     </div>
                     {isLoading ? (
-                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                      <Skeleton className="profile-stat-skeleton" />
                     ) : (
-                      <div className="text-2xl font-bold text-success">
+                      <div className="profile-stat-value text-success">
                         {profile?._count?.trades || 0}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Trades</div>
+                    <div className="profile-stat-label">Trades</div>
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardContent className="p-4 text-center">
-                    <div className="flex items-center justify-center mb-2">
+                  <CardContent className="profile-stat-card">
+                    <div className="profile-stat-icon">
                       <MessageSquare className="h-5 w-5 text-info" />
                     </div>
                     {isLoading ? (
-                      <Skeleton className="h-6 w-12 mx-auto mb-1" />
+                      <Skeleton className="profile-stat-skeleton" />
                     ) : (
-                      <div className="text-2xl font-bold text-info">
+                      <div className="profile-stat-value text-info">
                         {profile?._count?.reviews || 0}
                       </div>
                     )}
-                    <div className="text-xs text-muted-foreground">Reviews</div>
+                    <div className="profile-stat-label">Reviews</div>
                   </CardContent>
                 </Card>
               </div>
@@ -451,14 +454,26 @@ const ProfileModal = ({
                     // Safety check: don't allow rating yourself
                     const canRate = userIdToRate && userIdToRate !== currentUserId;
                     
-                    // Check if current user has already rated this trade
-                    // Handle case where userRatings might be undefined or empty
-                    const hasRated = userRatings && userRatings.length > 0 ? userRatings.some(rating => 
-                      rating.trade_id === trade.id && 
-                      (rating.rater_id === currentUserId || rating.reviewer_id === currentUserId)
-                    ) : false;
-                    
-                    // Items are swapped in perspective
+                            // Check if current user has already rated this trade
+                            // Handle case where userRatings might be undefined or empty
+                            const hasRated = userRatings && userRatings.length > 0 ? userRatings.some(rating => 
+                              rating.trade_id === trade.id && 
+                              (rating.rater_id === currentUserId || rating.reviewer_id === currentUserId)
+                            ) : false;
+
+                            // Debug logging for rating form visibility
+                            console.log('Rating form visibility check:', {
+                              tradeId: trade.id,
+                              isCurrentUser,
+                              hasRated,
+                              canRate,
+                              currentUserId,
+                              userIdToRate,
+                              userRatingsCount: userRatings?.length || 0,
+                              shouldShowRatingForm: !isCurrentUser && !hasRated && canRate,
+                              tradePartnerName: tradePartner?.name,
+                              itemWeReceived: itemWeReceived?.title
+                            });                    // Items are swapped in perspective
                     const myItem = isCurrentUserOwner ? (trade as any).requested_item : (trade as any).offered_item;
                     const theirItem = isCurrentUserOwner ? (trade as any).offered_item : (trade as any).requested_item;
                     

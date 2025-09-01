@@ -204,8 +204,8 @@ export const Marketplace = () => {
     }
   };
 
-  // Get count of user's items for display using the dedicated hook
-  const myItemsCount = userItemsData?.items?.length || 0;
+  // Get count of user's items for display using the dedicated hook, excluding SWAPPED items
+  const myItemsCount = userItemsData?.items?.filter(item => item.status !== 'SWAPPED').length || 0;
 
   // Filter and sort items
   const filteredItems = items.filter(item => {

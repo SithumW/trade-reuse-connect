@@ -37,8 +37,8 @@ export const MyItemsModal: React.FC<MyItemsModalProps> = ({
 
   const deleteItemMutation = useDeleteItem();
 
-  // Extract items from the response data
-  const myItems = userItemsData?.items || [];
+  // Extract items from the response data and filter out SWAPPED items
+  const myItems = userItemsData?.items?.filter(item => item.status !== 'SWAPPED') || [];
 
   const handleDeleteItem = async (itemId: string, itemTitle: string) => {
     if (!confirm(`Are you sure you want to delete "${itemTitle}"? This action cannot be undone.`)) {
