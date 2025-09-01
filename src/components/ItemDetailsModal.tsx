@@ -56,7 +56,12 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   // Fetch user's own items for trade selection using the dedicated endpoint
   const { data: userItemsData } = useItemsByUser(user?.id || '');
-  const myItems = userItemsData?.items?.filter(myItem => myItem.id !== item?.id) || [];
+  const myItems = userItemsData?.items?.filter(myItem => 
+    myItem.id !== item?.id && 
+    myItem.status !== 'SWAPPED' && 
+    myItem.status !== 'RESERVED' &&
+    myItem.status !== 'REMOVED'
+  ) || [];
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -279,8 +284,7 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">4.5</span>
+                    <span className="text-sm font-medium">{item.user.loyalty_points}</span>
                   </div>
                 </div>
               </CardContent>

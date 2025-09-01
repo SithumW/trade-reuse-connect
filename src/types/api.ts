@@ -219,13 +219,24 @@ export interface RatingCreate {
   trade_id: string;
   reviewee_id: string;
   rating: number;
-  comment?: string;
+  comment?: string | null;
 }
 
 export interface RatingStats {
-  average_rating: number;
-  total_ratings: number;
-  rating_distribution: Record<string, number>;
+  received: {
+    average: number;
+    total: number;
+    min: number;
+    max: number;
+    distribution: Array<{
+      rating: number;
+      count: number;
+    }>;
+  };
+  given: {
+    average: number;
+    total: number;
+  };
 }
 
 // Search and Pagination Types

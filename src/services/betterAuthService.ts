@@ -1,6 +1,7 @@
 import { authClient } from '@/lib/auth-client';
 import { User } from '@/types/api';
 import { config } from '@/config/env';
+import { userService } from '@/services/user';
 
 interface AuthRequest {
   email: string;
@@ -15,11 +16,11 @@ const transformBetterAuthUser = (betterAuthUser: any): User => {
     name: betterAuthUser.name,
     email: betterAuthUser.email || '',
     image: betterAuthUser.image || undefined,
-    latitude: undefined,
-    longitude: undefined,
-    bio: undefined,
-    loyalty_points: 0,
-    badge: 'BRONZE' as const,
+    latitude: betterAuthUser.latitude || undefined,
+    longitude: betterAuthUser.longitude || undefined,
+    bio: betterAuthUser.bio || undefined,
+    loyalty_points: betterAuthUser.loyalty_points || 0,
+    badge: (betterAuthUser.badge as 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND' | 'RUBY') || 'BRONZE',
     createdAt: betterAuthUser.createdAt?.toISOString() || new Date().toISOString(),
     updatedAt: betterAuthUser.updatedAt?.toISOString() || new Date().toISOString(),
   };
@@ -63,10 +64,23 @@ class BetterAuthService {
       
       if (response.data?.user) {
         console.log('[BetterAuth] Registration successful:', response.data.user.name);
-        const user = transformBetterAuthUser(response.data.user);
-        // Store user data locally for quick access
-        localStorage.setItem('auth_user', JSON.stringify(user));
-        return user;
+        
+        // After successful Better Auth registration, fetch complete user profile from our API
+        try {
+          console.log('[BetterAuth] Fetching complete user profile from API after registration...');
+          const fullUserProfile = await userService.getMyProfile();
+          console.log('[BetterAuth] Full user profile fetched after registration:', fullUserProfile.name, 'Points:', fullUserProfile.loyalty_points);
+          
+          // Store complete user data locally
+          localStorage.setItem('auth_user', JSON.stringify(fullUserProfile));
+          return fullUserProfile;
+        } catch (profileError) {
+          console.warn('[BetterAuth] Failed to fetch complete profile after registration, using Basic Auth data:', profileError);
+          // Fallback to transformed Better Auth user if API call fails
+          const user = transformBetterAuthUser(response.data.user);
+          localStorage.setItem('auth_user', JSON.stringify(user));
+          return user;
+        }
       }
       
       if (response.error) {
@@ -118,10 +132,23 @@ class BetterAuthService {
       
       if (response.data?.user) {
         console.log('[BetterAuth] Login successful:', response.data.user.name);
-        const user = transformBetterAuthUser(response.data.user);
-        // Store user data locally for quick access
-        localStorage.setItem('auth_user', JSON.stringify(user));
-        return user;
+        
+        // After successful Better Auth login, fetch complete user profile from our API
+        try {
+          console.log('[BetterAuth] Fetching complete user profile from API...');
+          const fullUserProfile = await userService.getMyProfile();
+          console.log('[BetterAuth] Full user profile fetched:', fullUserProfile.name, 'Points:', fullUserProfile.loyalty_points);
+          
+          // Store complete user data locally
+          localStorage.setItem('auth_user', JSON.stringify(fullUserProfile));
+          return fullUserProfile;
+        } catch (profileError) {
+          console.warn('[BetterAuth] Failed to fetch complete profile, using Basic Auth data:', profileError);
+          // Fallback to transformed Better Auth user if API call fails
+          const user = transformBetterAuthUser(response.data.user);
+          localStorage.setItem('auth_user', JSON.stringify(user));
+          return user;
+        }
       }
       
       if (response.error) {
@@ -145,10 +172,23 @@ class BetterAuthService {
       
       if (session.data?.user) {
         console.log('[BetterAuth] Session valid for user:', session.data.user.name);
-        const user = transformBetterAuthUser(session.data.user);
-        // Update localStorage with fresh user data
-        localStorage.setItem('auth_user', JSON.stringify(user));
-        return user;
+        
+        // After validating session, fetch complete user profile from our API
+        try {
+          console.log('[BetterAuth] Fetching complete user profile from API...');
+          const fullUserProfile = await userService.getMyProfile();
+          console.log('[BetterAuth] Full user profile fetched:', fullUserProfile.name, 'Points:', fullUserProfile.loyalty_points);
+          
+          // Update localStorage with fresh user data
+          localStorage.setItem('auth_user', JSON.stringify(fullUserProfile));
+          return fullUserProfile;
+        } catch (profileError) {
+          console.warn('[BetterAuth] Failed to fetch complete profile, using Basic Auth data:', profileError);
+          // Fallback to transformed Better Auth user if API call fails
+          const user = transformBetterAuthUser(session.data.user);
+          localStorage.setItem('auth_user', JSON.stringify(user));
+          return user;
+        }
       }
       
       if (session.error) {

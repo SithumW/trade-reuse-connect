@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import "@/styles/components/MyItemsModal.css";
 import { formatLocation, generateAvatar } from '@/utils/helpers';
+import { getImageUrl } from '@/config/env';
 
 interface MyItemsModalProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export const MyItemsModal: React.FC<MyItemsModalProps> = ({
                       <div className="w-24 h-24 bg-muted flex items-center justify-center shrink-0">
                         {item.images && item.images.length > 0 ? (
                           <img
-                            src={item.images[0].url}
+                            src={getImageUrl(item.images[0].url) || '/placeholder.svg'}
                             alt={item.title}
                             className="w-full h-full object-cover"
                           />

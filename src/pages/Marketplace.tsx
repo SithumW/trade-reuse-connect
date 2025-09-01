@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useItems, useItemsByUser } from "@/hooks/useItems";
-import { tradeService } from "@/services/trade";
-import { ratingService } from "@/services/rating";
 import { Header } from "@/components/Header";
 import "@/styles/pages/Marketplace.css";
 import { ItemCard } from "@/components/ItemCard";
@@ -19,7 +17,6 @@ import { toast } from "sonner";
 import { formatLocation, generateAvatar } from "@/utils/helpers";
 import { calculateDistance, formatDistance } from "@/utils/location";
 import { getImageUrl } from "@/config/env";
-import { Trade, Rating } from "@/types/api";
 
 const categories = ["All", "Electronics", "Furniture", "Clothing", "Books", "Sports & Fitness", "Home & Garden", "Toys & Games"];
 
@@ -35,9 +32,6 @@ export const Marketplace = () => {
   const [isMyTradesModalOpen, setIsMyTradesModalOpen] = useState(false);
   const [selectedItemForDetails, setSelectedItemForDetails] = useState<any>(null);
   const [isItemDetailsModalOpen, setIsItemDetailsModalOpen] = useState(false);
-  const [completedTrades, setCompletedTrades] = useState<Trade[]>([]);
-  const [userRatings, setUserRatings] = useState<Rating[]>([]);
-  const [userGivenRatings, setUserGivenRatings] = useState<Rating[]>([]);
 
   const { data: items = [], isLoading: itemsLoading, error: itemsError } = useItems({
     category: selectedCategory !== "All" ? selectedCategory : undefined,
@@ -47,10 +41,9 @@ export const Marketplace = () => {
   const { data: userItemsData } = useItemsByUser(user?.id || '');
 
   useEffect(() => {
-    if (user?.id) {
-      handleFetchProfileData(user.id);
-    }
-  }, [user?.id]);
+    console.log('Marketplace useEffect triggered', { userId: user?.id, userLoaded: !!user });
+    // ProfileModal now handles its own data fetching
+  }, [user?.id]); // Dependency on user.id to trigger when user loads
 
   const handleLogout = async () => {
     try {
@@ -103,27 +96,17 @@ export const Marketplace = () => {
     setIsItemDetailsModalOpen(true);
   };
 
-  const handlePostItem = () => setIsPostModalOpen(true);
-  const handleMyTrades = () => setIsMyTradesModalOpen(true);
-  const handlePostSuccess = () => {};
+  const handlePostItem = () => {
+    setIsPostModalOpen(true);
+  };
 
-  const handleFetchProfileData = async (userId: string) => {
-    try {
-      const trades = await tradeService.getCompletedTrades(userId);
-      setCompletedTrades(trades || []);
-      try {
-        const ratings = await ratingService.getUserRatings(userId);
-        setUserRatings(ratings || []);
-      } catch {}
-      if (user?.id) {
-        try {
-          const givenRatings = await ratingService.getRatingsByUser(user.id);
-          setUserGivenRatings(givenRatings || []);
-        } catch {}
-      }
-    } catch (error) {
-      toast.error('Failed to load profile data');
-    }
+  const handleMyTrades = () => {
+    setIsMyTradesModalOpen(true);
+  };
+
+  const handlePostSuccess = () => {
+    // Refresh items list after successful post
+    // The useItems hook should automatically refetch via query invalidation
   };
 
   const handleSearch = (value: string) => setSearchTerm(value);
@@ -164,13 +147,9 @@ export const Marketplace = () => {
           badge: (user.badge || 'BRONZE').toLowerCase() as any,
           points: user.loyalty_points || 0
         } : undefined} 
-        completedTrades={completedTrades}
-        userRatings={userRatings}
-        userGivenRatings={userGivenRatings}
         onLogoutClick={handleLogout}
         onPostItemClick={handlePostItem}
         onMyTradesClick={handleMyTrades}
-        onFetchProfileData={handleFetchProfileData}
       />
 
       <main className="marketplace-main">
