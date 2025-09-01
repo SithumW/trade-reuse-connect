@@ -1,6 +1,6 @@
 /* ProfileModal Styles */
 .profile-modal-content {
-  max-width: 600px;
+  min-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
 }

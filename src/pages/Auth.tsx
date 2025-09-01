@@ -28,13 +28,11 @@ export const Auth = () => {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!formData.email || !formData.password) {
       setError("Email and password are required");
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("Please enter a valid email address");
@@ -60,15 +58,12 @@ export const Auth = () => {
 
     try {
       if (isLogin) {
-        console.log('[Auth] Attempting login...');
         await login(formData.email.trim(), formData.password);
       } else {
-        console.log('[Auth] Attempting registration...');
         await register(formData.name.trim(), formData.email.trim(), formData.password);
       }
       navigate('/marketplace');
     } catch (error: any) {
-      console.error('[Auth] Authentication error:', error);
       const errorMessage = error.message || 'Something went wrong. Please try again.';
       setError(errorMessage);
     }
@@ -84,30 +79,28 @@ export const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="auth-page">
+      <div className="auth-container">
         {/* Back Button */}
-        <Button 
-          variant="ghost" 
-          onClick={handleBack}
-          className="mb-6 text-primary-foreground hover:bg-primary-foreground/10"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+        <Button variant="ghost" onClick={handleBack} className="auth-back-button">
+          <ArrowLeft className="auth-back-icon" />
           Back
         </Button>
 
-        <Card className="shadow-strong">
-          <CardHeader className="text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="bg-gradient-hero p-3 rounded-full">
-                <Recycle className="h-8 w-8 text-primary-foreground" />
-              </div>
+
+        <Card className="auth-card">
+          <CardHeader className="auth-card-header">
+           <div className="auth-logo-wrapper">
+            <div className="auth-logo-bg">
+              <img src="/icons/logohome.png" alt="Swappo Logo" className="auth-logo-img" />
             </div>
+          </div>
+
             <div>
-              <CardTitle className="text-2xl font-bold">
+              <CardTitle className="auth-card-title">
                 {isLogin ? "Welcome Back" : "Join Swappo"}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="auth-card-desc">
                 {isLogin 
                   ? "Sign in to continue trading with your community" 
                   : "Create your account and start trading sustainably"
@@ -116,26 +109,26 @@ export const Auth = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="auth-card-content">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="auth-form">
               {!isLogin && (
-                <div className="space-y-2">
+                <div className="auth-form-group">
                   <Label htmlFor="name">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <div className="auth-input-wrapper">
+          
                     <Input
                       id="name"
                       type="text"
                       placeholder="Enter your full name"
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
-                      className="pl-10"
+                      className="auth-input"
                       required={!isLogin}
                       minLength={2}
                       maxLength={50}
@@ -144,33 +137,33 @@ export const Auth = () => {
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="auth-form-group">
                 <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <div className="auth-input-wrapper">
+                  
                   <Input
                     id="email"
                     type="email"
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
-                    className="pl-10"
+                    className="auth-input"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="auth-form-group">
                 <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <div className="auth-input-wrapper">
+                  
                   <Input
                     id="password"
                     type="password"
                     placeholder={isLogin ? "Enter your password" : "Create a password (min 6 characters)"}
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
-                    className="pl-10"
+                    className="auth-input"
                     required
                     minLength={isLogin ? undefined : 6}
                   />
@@ -178,31 +171,31 @@ export const Auth = () => {
               </div>
 
               {!isLogin && (
-                <div className="space-y-2">
+                <div className="auth-form-group">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <div className="auth-input-wrapper">
+                    
                     <Input
                       id="confirmPassword"
                       type="password"
                       placeholder="Confirm your password"
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                      className="pl-10"
+                      className="auth-input"
                       required={!isLogin}
                     />
                   </div>
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="auth-submit-btn" disabled={isLoading}>
                 {isLoading ? "Please wait..." : isLogin ? "Sign In" : "Create Account"}
               </Button>
             </form>
 
-            <div className="text-center">
-              <Separator className="my-4" />
-              <p className="text-sm text-muted-foreground">
+            <div className="auth-toggle-section">
+              <Separator className="auth-separator" />
+              <p className="auth-toggle-text">
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
               </p>
               <Button
@@ -213,7 +206,7 @@ export const Auth = () => {
                   setError("");
                   setFormData({ email: "", password: "", name: "", confirmPassword: "" });
                 }}
-                className="p-0 h-auto font-medium"
+                className="auth-toggle-btn"
                 disabled={isLoading}
               >
                 {isLogin ? "Sign up for free" : "Sign in instead"}
@@ -221,9 +214,9 @@ export const Auth = () => {
             </div>
 
             {!isLogin && (
-              <div className="text-xs text-muted-foreground text-center space-y-2">
+              <div className="auth-terms">
                 <p>By creating an account, you agree to our Terms of Service and Privacy Policy.</p>
-                <p className="text-primary">🌱 Join the sustainable trading community!</p>
+                <p className="auth-terms-highlight">🌱 Join the sustainable trading community!</p>
               </div>
             )}
           </CardContent>
