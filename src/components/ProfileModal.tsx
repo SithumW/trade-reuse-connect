@@ -414,6 +414,8 @@ const ProfileModal = ({
                           {formatReviewDate(rating.created_at)}
                         </p>
                       </div>
+
+
                       {rating.comment && (
                         <p className="text-sm text-muted-foreground ml-10 italic">
                           "{rating.comment}"
