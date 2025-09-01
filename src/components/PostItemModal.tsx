@@ -17,6 +17,7 @@ import {
   Loader2,
   AlertCircle 
 } from 'lucide-react';
+import "@/styles/components/PostItemModal.css";
 
 interface PostItemModalProps {
   isOpen: boolean;

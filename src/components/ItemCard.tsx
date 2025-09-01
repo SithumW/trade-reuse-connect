@@ -11,6 +11,7 @@ import {
   Star,
   Info
 } from "lucide-react";
+import "@/styles/components/ItemCard.css";
 
 interface ItemCardProps {
   item: {

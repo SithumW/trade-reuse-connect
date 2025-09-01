@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Navigation, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCurrentLocation, storeUserLocation } from '@/utils/location';
+import "@/styles/components/LocationPermissionModal.css";
 
 interface LocationPermissionModalProps {
   isOpen: boolean;
@@ -58,8 +59,8 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
     <Dialog open={isOpen} onOpenChange={() => !isGettingLocation && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
+          <DialogTitle className="location-modal-header">
+            <MapPin className="location-modal-icon" />
             Enable Location Services
           </DialogTitle>
           <DialogDescription>
@@ -67,22 +68,22 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="location-modal-content">
           {/* Benefits */}
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              <h3 className="font-medium text-sm">Benefits of sharing your location:</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Navigation className="h-4 w-4 text-green-500" />
+          <Card className="location-benefits-card">
+            <CardContent className="location-benefits-content">
+              <h3 className="location-benefits-title">Benefits of sharing your location:</h3>
+              <div className="location-benefits-list">
+                <div className="location-benefit-item">
+                  <Navigation className="location-benefit-icon green" />
                   <span>Items sorted by distance to you</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-500" />
+                <div className="location-benefit-item">
+                  <MapPin className="location-benefit-icon blue" />
                   <span>See "2.5km away" instead of coordinates</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-500" />
+                <div className="location-benefit-item">
+                  <Clock className="location-benefit-icon orange" />
                   <span>Find nearby traders faster</span>
                 </div>
               </div>

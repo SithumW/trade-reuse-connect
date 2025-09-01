@@ -13,6 +13,7 @@ import {
   Recycle,
   ArrowRightLeft
 } from "lucide-react";
+import "@/styles/components/Header.css";
 
 interface HeaderProps {
   user?: {
@@ -34,11 +35,11 @@ interface HeaderProps {
 }
 
 const badgeConfig = {
-  bronze: { label: "Bronze Trader", color: "bg-amber-600" },
-  silver: { label: "Silver Trader", color: "bg-slate-400" },
-  gold: { label: "Gold Trader", color: "bg-yellow-500" },
-  diamond: { label: "Diamond Trader", color: "bg-cyan-400" },
-  ruby: { label: "Ruby Trader", color: "bg-red-500" }
+  bronze: { label: "Bronze Trader", color: "badge-bronze" },
+  silver: { label: "Silver Trader", color: "badge-silver" },
+  gold: { label: "Gold Trader", color: "badge-gold" },
+  diamond: { label: "Diamond Trader", color: "badge-diamond" },
+  ruby: { label: "Ruby Trader", color: "badge-ruby" }
 };
 
 export const Header = ({ 
@@ -56,24 +57,24 @@ export const Header = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-card border-b border-border shadow-soft sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="header">
+      <div className="header-container">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
-          <div className="bg-gradient-hero p-2 rounded-lg">
+        <div className="logo-section">
+          <div className="logo-icon">
             <Recycle className="h-6 w-6 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold text-primary">Swappo</span>
+          <span className="logo-text">Swappo</span>
         </div>
 
         {/* Desktop Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+        <div className="desktop-search">
+          <div className="search-container">
+            <Search className="search-icon" />
             <input
               type="text"
               placeholder="Search items..."
-              className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="search-input"
             />
           </div>
         </div>

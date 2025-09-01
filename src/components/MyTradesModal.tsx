@@ -33,6 +33,7 @@ import {
 import { toast } from 'sonner';
 import { getImageUrl } from '@/config/env';
 import { generateAvatar } from '@/utils/helpers';
+import "@/styles/components/MyTradesModal.css";
 
 interface MyTradesModalProps {
   isOpen: boolean;

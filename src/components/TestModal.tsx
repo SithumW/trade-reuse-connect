@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import "@/styles/components/TestModal.css";
 
 interface TestModalProps {
   isOpen: boolean;
@@ -13,8 +14,8 @@ export const TestModal: React.FC<TestModalProps> = ({ isOpen, onClose }) => {
         <DialogHeader>
           <DialogTitle>Test Modal</DialogTitle>
         </DialogHeader>
-        <div className="p-4">
-          <p>This is a simple test modal to check if modals work at all.</p>
+        <div className="test-modal-content">
+          <p className="test-modal-text">This is a simple test modal to check if modals work at all.</p>
         </div>
       </DialogContent>
     </Dialog>

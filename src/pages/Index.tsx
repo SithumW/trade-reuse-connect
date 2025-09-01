@@ -2,6 +2,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Landing } from "./Landing";
 import { Navigate } from "react-router-dom";
 import { useEffect } from "react";
+import "@/styles/pages/Index.css";
 
 const Index = () => {
   const { isAuthenticated, isLoading } = useAuth();
