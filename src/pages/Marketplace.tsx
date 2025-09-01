@@ -32,9 +32,6 @@ export const Marketplace = () => {
   const [isMyTradesModalOpen, setIsMyTradesModalOpen] = useState(false);
   const [selectedItemForDetails, setSelectedItemForDetails] = useState<any>(null);
   const [isItemDetailsModalOpen, setIsItemDetailsModalOpen] = useState(false);
-  const [completedTrades, setCompletedTrades] = useState<Trade[]>([]);
-  const [userRatings, setUserRatings] = useState<Rating[]>([]); // Ratings received by the user
-  const [userGivenRatings, setUserGivenRatings] = useState<Rating[]>([]); // Ratings given by the current user
 
   const { data: items = [], isLoading: itemsLoading, error: itemsError } = useItems({
     category: selectedCategory !== "All" ? selectedCategory : undefined,
