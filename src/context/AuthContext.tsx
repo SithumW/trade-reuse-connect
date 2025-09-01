@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { User } from '@/types/api';
 import { betterAuthService } from '@/services/betterAuthService'; // Use Better Auth service
 import { toast } from 'sonner';
@@ -30,6 +31,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [hasLocation, setHasLocation] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  
+  // Get QueryClient instance to clear cache on logout
+  const queryClient = useQueryClient();
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -85,6 +89,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       console.log('[Auth] Starting login process...');
+      
+      // Clear all cached data before login to prevent data leakage between users
+      await queryClient.clear();
+      console.log('[Auth] Cleared query cache before login');
+      
       const loggedInUser = await betterAuthService.login({ email, password });
       
       setUser(loggedInUser);
@@ -112,6 +121,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
+      
+      // Clear all cached data before registration to ensure clean state
+      await queryClient.clear();
+      console.log('[Auth] Cleared query cache before registration');
+      
       const newUser = await betterAuthService.register({ name, email, password });
       
       setUser(newUser);
@@ -134,6 +148,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       await betterAuthService.logout();
       
+      // Clear all cached data on logout to prevent data leakage to next user
+      await queryClient.clear();
+      console.log('[Auth] Cleared query cache after logout');
+      
       setUser(null);
       setIsAuthenticated(false);
       
@@ -141,7 +159,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[Auth] Logout successful');
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
-      // Force logout locally even if API call fails
+      // Force logout locally even if API call fails, but still clear cache
+      await queryClient.clear();
+      console.log('[Auth] Cleared query cache after logout (with errors)');
+      
       setUser(null);
       setIsAuthenticated(false);
       toast.warning('Logged out (with errors)');

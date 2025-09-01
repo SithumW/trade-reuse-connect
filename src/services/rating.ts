@@ -34,9 +34,15 @@ class RatingService {
 
   // Get ratings for specific user
   async getUserRatings(userId: string): Promise<Rating[]> {
-    const response = await apiClient.get<Rating[]>(`/ratings/user/${userId}`);
+    const response = await apiClient.get<{
+      ratings: Rating[];
+      statistics: {
+        averageRating: number;
+        totalRatings: number;
+      };
+    }>(`/ratings/user/${userId}`);
     if (response.success && response.data) {
-      return response.data;
+      return response.data.ratings; // Return just the ratings array
     }
     throw new Error(response.message || 'Failed to get user ratings');
   }

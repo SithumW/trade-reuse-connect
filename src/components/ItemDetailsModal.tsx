@@ -56,7 +56,12 @@ export const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   // Fetch user's own items for trade selection using the dedicated endpoint
   const { data: userItemsData } = useItemsByUser(user?.id || '');
-  const myItems = userItemsData?.items?.filter(myItem => myItem.id !== item?.id) || [];
+  const myItems = userItemsData?.items?.filter(myItem => 
+    myItem.id !== item?.id && 
+    myItem.status !== 'SWAPPED' && 
+    myItem.status !== 'RESERVED' &&
+    myItem.status !== 'REMOVED'
+  ) || [];
 
   // Reset state when modal opens/closes
   useEffect(() => {

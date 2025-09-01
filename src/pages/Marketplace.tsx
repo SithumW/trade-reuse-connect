@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useItems, useItemsByUser } from "@/hooks/useItems";
-import { tradeService } from "@/services/trade";
-import { ratingService } from "@/services/rating";
 import { Header } from "@/components/Header";
 import "@/styles/pages/Marketplace.css";
 import { ItemCard } from "@/components/ItemCard";
@@ -26,7 +24,6 @@ import { toast } from "sonner";
 import { formatLocation, generateAvatar } from "@/utils/helpers";
 import { calculateDistance, formatDistance } from "@/utils/location";
 import { getImageUrl } from "@/config/env";
-import { Trade, Rating } from "@/types/api";
 
 const categories = ["All", "Electronics", "Furniture", "Clothing", "Books", "Sports & Fitness", "Home & Garden", "Toys & Games"];
 
@@ -42,9 +39,6 @@ export const Marketplace = () => {
   const [isMyTradesModalOpen, setIsMyTradesModalOpen] = useState(false);
   const [selectedItemForDetails, setSelectedItemForDetails] = useState<any>(null);
   const [isItemDetailsModalOpen, setIsItemDetailsModalOpen] = useState(false);
-  const [completedTrades, setCompletedTrades] = useState<Trade[]>([]);
-  const [userRatings, setUserRatings] = useState<Rating[]>([]); // Ratings received by the user
-  const [userGivenRatings, setUserGivenRatings] = useState<Rating[]>([]); // Ratings given by the current user
 
   // Fetch items from API using custom hook
   const { 
@@ -65,11 +59,7 @@ export const Marketplace = () => {
   // Load profile data when marketplace loads and user is available
   useEffect(() => {
     console.log('Marketplace useEffect triggered', { userId: user?.id, userLoaded: !!user });
-    
-    if (user?.id) {
-      console.log('Calling handleFetchProfileData for current user:', user.id);
-      handleFetchProfileData(user.id);
-    }
+    // ProfileModal now handles its own data fetching
   }, [user?.id]); // Dependency on user.id to trigger when user loads
 
   const handleLogout = async () => {
@@ -144,51 +134,6 @@ export const Marketplace = () => {
     // The useItems hook should automatically refetch via query invalidation
   };
 
-  const handleFetchProfileData = async (userId: string) => {
-    try {
-      console.log('========== handleFetchProfileData CALLED ==========');
-      console.log('Fetching profile data for:', userId);
-      console.log('Current user:', user?.id);
-      
-      // Fetch completed trades for the user
-      const trades = await tradeService.getCompletedTrades(userId);
-      console.log('Fetched completed trades:', trades?.length || 0, 'trades');
-      setCompletedTrades(trades || []);
-      
-      // Fetch ratings received by the user (for profile stats)
-      try {
-        const ratings = await ratingService.getUserRatings(userId);
-        console.log('Fetched user ratings (received):', ratings?.length || 0, 'ratings');
-        setUserRatings(ratings || []);
-      } catch (ratingError) {
-        console.warn('Failed to fetch received ratings, continuing without them:', ratingError);
-        setUserRatings([]);
-      }
-
-      // Fetch ratings given by the current user (to check what they've already rated)
-      if (user?.id) {
-        try {
-          const givenRatings = await ratingService.getRatingsByUser(user.id);
-          console.log('Fetched ratings given by current user:', givenRatings?.length || 0, 'ratings');
-          setUserGivenRatings(givenRatings || []);
-        } catch (givenRatingError) {
-          console.warn('Failed to fetch given ratings, continuing without them:', givenRatingError);
-          setUserGivenRatings([]);
-        }
-      }
-      
-      console.log('Profile data fetched successfully:', { 
-        trades: trades?.length, 
-        receivedRatings: userRatings.length,
-        givenRatings: userGivenRatings.length 
-      });
-      console.log('========== handleFetchProfileData COMPLETE ==========');
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-      toast.error('Failed to load profile data');
-    }
-  };
-
   const handleSearch = (value: string) => {
     setSearchTerm(value);
   };
@@ -261,13 +206,9 @@ export const Marketplace = () => {
           badge: (user.badge || 'BRONZE').toLowerCase() as any,
           points: user.loyalty_points || 0
         } : undefined} 
-        completedTrades={completedTrades}
-        userRatings={userRatings}
-        userGivenRatings={userGivenRatings}
         onLogoutClick={handleLogout}
         onPostItemClick={handlePostItem}
         onMyTradesClick={handleMyTrades}
-        onFetchProfileData={handleFetchProfileData}
       />
 
       <main className="container mx-auto px-4 py-8">

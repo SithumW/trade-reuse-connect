@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProfileModal from "@/components/ProfileModal";
-import { Trade, Rating } from "@/types/api";
 import { 
   LogOut, 
   Plus, 
@@ -23,10 +22,6 @@ interface HeaderProps {
     badge: "bronze" | "silver" | "gold" | "diamond" | "ruby";
     points: number;
   };
-  completedTrades?: Trade[];
-  userRatings?: Rating[];
-  userGivenRatings?: Rating[]; // Ratings given by the current user
-  onFetchProfileData?: (userId: string) => void;
   onLoginClick?: () => void;
   onLogoutClick?: () => void;
   onPostItemClick?: () => void;
@@ -44,10 +39,6 @@ const badgeConfig = {
 
 export const Header = ({ 
   user, 
-  completedTrades,
-  userRatings,
-  userGivenRatings,
-  onFetchProfileData,
   onLoginClick, 
   onLogoutClick, 
   onPostItemClick, 
@@ -107,9 +98,6 @@ export const Header = ({
                 <ProfileModal 
                   userId={user.id}
                   isCurrentUser={true}
-                  completedTrades={completedTrades}
-                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
-                  onFetchProfileData={onFetchProfileData}
                   trigger={
                     <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
                       <Avatar className="h-8 w-8">
@@ -163,9 +151,6 @@ export const Header = ({
                 <ProfileModal 
                   userId={user.id}
                   isCurrentUser={true}
-                  completedTrades={completedTrades}
-                  userRatings={userGivenRatings} // Pass ratings given by current user for checking
-                  onFetchProfileData={onFetchProfileData}
                   trigger={
                     <Button variant="ghost" size="sm" className="h-auto p-1 rounded-full">
                       <Avatar className="h-10 w-10">

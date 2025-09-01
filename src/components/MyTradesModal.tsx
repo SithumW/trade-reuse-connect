@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ProfileModal from '@/components/ProfileModal';
+import { RatingModal } from '@/components/RatingModal';
 import { 
   ArrowRightLeft,
   Clock,
@@ -28,7 +29,8 @@ import {
   Package,
   Loader2,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Star
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getImageUrl } from '@/config/env';
@@ -49,6 +51,13 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('received');
   const [revealedContacts, setRevealedContacts] = useState<Set<string>>(new Set());
+  const [ratingModalState, setRatingModalState] = useState<{
+    isOpen: boolean;
+    tradeId: string;
+    tradePartner: any;
+    tradeDetails: any;
+  } | null>(null);
+  const [ratedTrades, setRatedTrades] = useState<Set<string>>(new Set());
 
   // API hooks with safe defaults
   const { data: myTrades = [], isLoading: tradesLoading, error: tradesError } = useMyTrades();
@@ -62,6 +71,13 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
 
   // Filter sent requests to exclude accepted ones
   const pendingSentRequests = safeSentRequests.filter(request => request.status !== 'ACCEPTED');
+
+  // Filter received requests to exclude accepted ones (only show pending and rejected)
+  const pendingReceivedRequests = safeReceivedRequests.filter(request => 
+    request.status !== 'ACCEPTED'
+  );
+
+
 
   // Filter for accepted requests (both received and sent that are accepted - show all including completed)
   const acceptedRequests = [
@@ -78,7 +94,15 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
     if (tradesError) console.error('Trades error:', tradesError);
     if (receivedError) console.error('Received requests error:', receivedError);
     if (sentError) console.error('Sent requests error:', sentError);
-  }, [tradesError, receivedError, sentError]);
+    
+    // Debug data structure
+    if (safeReceivedRequests.length > 0) {
+      console.log('Sample received request structure:', safeReceivedRequests[0]);
+    }
+    if (safeSentRequests.length > 0) {
+      console.log('Sample sent request structure:', safeSentRequests[0]);
+    }
+  }, [tradesError, receivedError, sentError, safeReceivedRequests, safeSentRequests]);
 
   // Mutation hooks
   const acceptTradeMutation = useAcceptTradeRequest();
@@ -144,8 +168,148 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
   };
 
   const handleRevealContacts = (requestId: string) => {
-    setRevealedContacts(prev => new Set(prev).add(requestId));
-    toast.success('Contact information revealed');
+    setRevealedContacts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(requestId)) {
+        newSet.delete(requestId);
+        toast.success('Contact information hidden');
+      } else {
+        newSet.add(requestId);
+        toast.success('Contact information revealed');
+      }
+      return newSet;
+    });
+  };
+
+  const handleOpenRatingModal = (request: TradeRequest) => {
+    console.log('Opening rating modal for request:', request);
+    console.log('Current user ID:', user?.id);
+    
+    // Determine if this is a received or sent request by checking multiple paths
+    let isReceived = false;
+    let tradePartner = null;
+    
+    // First, try to determine if this is a received request
+    if (request.requested_item?.user?.id === user?.id) {
+      // This is a received request - someone wants our item
+      isReceived = true;
+      tradePartner = request.requester;
+    } else if (request.requester?.id === user?.id) {
+      // This is a sent request - we want someone else's item
+      isReceived = false;
+      tradePartner = request.requested_item?.user;
+    } else {
+      // Fallback logic - check all possible paths
+      console.log('Fallback logic - checking all paths for trade partner');
+      
+      // Check if current user is the owner of offered item
+      if (request.offered_item?.user?.id === user?.id) {
+        isReceived = true;
+        tradePartner = request.requester || request.requested_item?.user;
+      } 
+      // Check if current user is the requester
+      else if (request.requester?.id === user?.id) {
+        isReceived = false;
+        tradePartner = request.requested_item?.user || request.offered_item?.user;
+      }
+      // Final fallback - try to find any user that's not the current user
+      else {
+        const possiblePartners = [
+          request.requester,
+          request.requested_item?.user,
+          request.offered_item?.user
+        ].filter(partner => partner && partner.id && partner.id !== user?.id);
+        
+        if (possiblePartners.length > 0) {
+          tradePartner = possiblePartners[0];
+          // Assume it's received if we can't determine otherwise
+          isReceived = true;
+        }
+      }
+    }
+    
+    // Get items involved in the trade
+    const myItem = isReceived ? request.requested_item : request.offered_item;
+    const theirItem = isReceived ? request.offered_item : request.requested_item;
+
+    console.log('Trade data:', {
+      isReceived,
+      tradePartner,
+      myItem,
+      theirItem,
+      userId: user?.id,
+      requestStructure: {
+        requester: request.requester,
+        requestedItemUser: request.requested_item?.user,
+        offeredItemUser: request.offered_item?.user
+      }
+    });
+
+    // Validate required data
+    if (!tradePartner) {
+      console.error('Missing trade partner:', { request, isReceived });
+      console.error('Available data:', {
+        requester: request.requester,
+        requestedItemUser: request.requested_item?.user,
+        offeredItemUser: request.offered_item?.user,
+        currentUserId: user?.id
+      });
+      toast.error('Unable to identify trade partner for rating');
+      return;
+    }
+
+    if (!myItem) {
+      console.error('Missing my item:', { request, isReceived });
+      toast.error('Unable to load your item details for rating');
+      return;
+    }
+
+    if (!theirItem) {
+      console.error('Missing their item:', { request, isReceived });
+      toast.error('Unable to load partner\'s item details for rating');
+      return;
+    }
+
+    // All data is valid, set up rating modal
+    setRatingModalState({
+      isOpen: true,
+      tradeId: request.id,
+      tradePartner: {
+        id: tradePartner.id,
+        name: tradePartner.name || 'Unknown User',
+        image: tradePartner.image,
+        loyalty_points: tradePartner.loyalty_points || 0
+      },
+      tradeDetails: {
+        myItem: {
+          title: myItem.title || 'Unknown Item',
+          category: myItem.category || 'Unknown',
+          condition: myItem.condition || 'GOOD',
+          images: myItem.images || []
+        },
+        theirItem: {
+          title: theirItem.title || 'Unknown Item',
+          category: theirItem.category || 'Unknown',
+          condition: theirItem.condition || 'GOOD',
+          images: theirItem.images || []
+        }
+      }
+    });
+
+    console.log('Rating modal state set successfully');
+  };
+
+  const handleCloseRatingModal = () => {
+    setRatingModalState(null);
+  };
+
+  const handleRatingSubmitted = () => {
+    // Add the trade to rated trades set
+    if (ratingModalState) {
+      setRatedTrades(prev => new Set(prev).add(ratingModalState.tradeId));
+    }
+    // Optionally refresh trade requests or show success message
+    toast.success('Thank you for your feedback!');
   };
 
   const handleViewItem = (item: any) => {
@@ -190,24 +354,79 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
     const isReceived = type === 'received';
     const isAccepted = type === 'accepted';
     
-    // For received requests: otherUser is the requester
-    // For sent requests: otherUser should be the owner of the requested item
-    const otherUser = isReceived 
-      ? request.requester 
-      : request.requested_item?.user || request.requester;
+    // Robust trade partner identification
+    let otherUser = null;
+    
+    if (isReceived) {
+      // For received requests: otherUser is the requester (person who wants our item)
+      otherUser = request.requester;
+    } else {
+      // For sent requests: otherUser is the owner of the requested item
+      otherUser = request.requested_item?.user;
+      
+      // Fallback for sent requests if requested item user is missing
+      if (!otherUser && request.offered_item?.user?.id !== user?.id) {
+        otherUser = request.offered_item?.user;
+      }
+    }
+    
+    // Additional fallback - find any user that's not the current user
+    if (!otherUser) {
+      const possibleUsers = [
+        request.requester,
+        request.requested_item?.user,
+        request.offered_item?.user
+      ].filter(u => u && u.id && u.id !== user?.id);
+      
+      if (possibleUsers.length > 0) {
+        otherUser = possibleUsers[0];
+      }
+    }
     
     const myItem = isReceived ? request.requested_item : request.offered_item;
     const theirItem = isReceived ? request.offered_item : request.requested_item;
     const isMutating = acceptTradeMutation.isPending || rejectTradeMutation.isPending || cancelTradeMutation.isPending || completeTradeRequest.isPending;
 
-    // Safety check - if we don't have the required data, don't render
+    // Safety check - if we don't have the required data, show error message
     if (!otherUser || !myItem || !theirItem) {
-      console.warn('Missing required data for trade request:', { otherUser, myItem, theirItem, request });
-      return null;
+      console.warn('Missing required data for trade request:', { 
+        requestId: request.id,
+        type,
+        otherUser: !!otherUser, 
+        myItem: !!myItem, 
+        theirItem: !!theirItem,
+        currentUserId: user?.id,
+        requestStructure: {
+          requester: request.requester,
+          requestedItemUser: request.requested_item?.user,
+          offeredItemUser: request.offered_item?.user
+        },
+        request 
+      });
+      
+      return (
+        <Card className="mb-4 border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              <div>
+                <p className="font-medium">Unable to load trade details</p>
+                <p className="text-sm text-red-500">
+                  Missing: {!otherUser && 'trade partner'} {!myItem && 'your item'} {!theirItem && 'their item'}
+                </p>
+                <p className="text-xs text-red-400 mt-1">
+                  Request ID: {request.id} | Type: {type} | User: {user?.id}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      );
     }
 
     // Check if the trade is completed
     const isTradeCompleted = request.trade && request.trade.status === 'COMPLETED';
+
 
     return (
       <Card className="mb-4">
@@ -275,21 +494,6 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
                   <p className="text-xs text-muted-foreground mt-1 capitalize">
                     {(myItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
                   </p>
-                  {/* Show phone numbers for my item if contacts are revealed */}
-                  {isAccepted  && myItem.phone_number && (
-                    <div className="mt-2 space-y-1">
-                      <div className="flex items-center gap-1 text-xs text-green-600">
-                        <Phone className="h-3 w-3" />
-                        <span>Phone: {myItem.phone_number}</span>
-                      </div>
-                      {myItem.whatsapp_number && (
-                        <div className="flex items-center gap-1 text-xs text-green-600">
-                          <MessageCircle className="h-3 w-3" />
-                          <span>WhatsApp: {myItem.whatsapp_number}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -319,7 +523,7 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
                     {(theirItem.condition || 'GOOD').toLowerCase().replace('_', ' ')} condition
                   </p>
                   {/* Show phone numbers for their item if contacts are revealed */}
-                  {isAccepted  && theirItem.phone_number && (
+                  {isAccepted && revealedContacts.has(request.id) && theirItem.phone_number && (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center gap-1 text-xs text-green-600">
                         <Phone className="h-3 w-3" />
@@ -343,42 +547,78 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
             {/* Buttons for accepted requests */}
             {isAccepted && (
               <>
-                {/* Show "Reveal Contacts" button for all accepted requests (completed or not) */}
-                {! onRevealContacts && (
-                  <Button
-                    onClick={() => onRevealContacts(request.id)}
-                    variant="outline"
-                    className="flex-1"
-                    size="sm"
-                  >
-                    <Phone className="h-4 w-4 mr-2" />
-                    Reveal Contacts
-                  </Button>
-                )}
+                {/* Show buttons only for non-completed trades */}
+                {!isTradeCompleted && (
+                  <>
+                    {/* Toggle "Reveal Contacts" button for accepted requests */}
+                    <Button
+                      onClick={() => handleRevealContacts(request.id)}
+                      variant={revealedContacts.has(request.id) ? "default" : "outline"}
+                      className="flex-1"
+                      size="sm"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      {revealedContacts.has(request.id) ? 'Hide Contacts' : 'Reveal Contacts'}
+                    </Button>
 
-                {/* Show "Complete Trade" button only for non-completed trades */}
-                {!isTradeCompleted && onCompleteTrade && (
-                  <Button
-                    onClick={() => onCompleteTrade(request.id)}
-                    disabled={completeTradeRequest.isPending}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    {completeTradeRequest.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 mr-2" />
+                    {/* Show "Complete Trade" button */}
+                    {onCompleteTrade && (
+                      <Button
+                        onClick={() => onCompleteTrade(request.id)}
+                        disabled={completeTradeRequest.isPending}
+                        className="flex-1"
+                        size="sm"
+                      >
+                        {completeTradeRequest.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        )}
+                        Complete Trade
+                      </Button>
                     )}
-                    Complete Trade
-                  </Button>
+                  </>
                 )}
 
-                {/* Show completed message for completed trades */}
+                {/* Show "Completed" button for completed trades */}
                 {isTradeCompleted && (
-                  <div className="flex-1 flex items-center justify-center p-2 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                    <span className="text-sm text-green-700 font-medium">Trade completed</span>
-                  </div>
+                  <>
+                    <Button
+                      disabled={true}
+                      className="flex-1 bg-green-50 border border-green-200 text-green-700 cursor-not-allowed hover:bg-green-50"
+                      size="sm"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                      Trade Completed
+                    </Button>
+                    
+                    {/* Rate User button for completed trades */}
+                    {!ratedTrades.has(request.id) && (
+                      <Button
+                        onClick={() => {
+                          console.log('Rate button clicked for request:', request.id);
+                          handleOpenRatingModal(request);
+                        }}
+                        className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+                        size="sm"
+                      >
+                        <Star className="h-4 w-4 mr-2" />
+                        Rate User
+                      </Button>
+                    )}
+                    
+                    {/* Already Rated indicator */}
+                    {ratedTrades.has(request.id) && (
+                      <Button
+                        disabled={true}
+                        className="flex-1 bg-green-100 border border-green-200 text-green-700 cursor-not-allowed"
+                        size="sm"
+                      >
+                        <Star className="h-4 w-4 mr-2 fill-yellow-400 text-yellow-500" />
+                        Rated
+                      </Button>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -463,7 +703,7 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="received" className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4" />
-              <span>Received ({safeReceivedRequests.length})</span>
+              <span>Received ({pendingReceivedRequests.length})</span>
             </TabsTrigger>
             <TabsTrigger value="sent" className="flex items-center space-x-2">
               <Clock className="h-4 w-4" />
@@ -496,14 +736,14 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
           {!isLoading && !tradesError && !receivedError && !sentError && (
             <>
               <TabsContent value="received" className="space-y-4 mt-6">
-                {safeReceivedRequests.length === 0 ? (
+                {pendingReceivedRequests.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold">No received requests</h3>
                     <p className="text-muted-foreground">Trade requests you receive will appear here</p>
                   </div>
                 ) : (
-                  safeReceivedRequests.map((request) => (
+                  pendingReceivedRequests.map((request) => (
                     <TradeRequestCard key={request.id} request={request} type="received" />
                   ))
                 )}
@@ -546,6 +786,18 @@ export const MyTradesModal: React.FC<MyTradesModalProps> = ({
             </>
           )}
         </Tabs>
+
+        {/* Rating Modal */}
+        {ratingModalState && (
+          <RatingModal
+            isOpen={ratingModalState.isOpen}
+            onClose={handleCloseRatingModal}
+            tradeId={ratingModalState.tradeId}
+            tradePartner={ratingModalState.tradePartner}
+            tradeDetails={ratingModalState.tradeDetails}
+            onRatingSubmitted={handleRatingSubmitted}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
