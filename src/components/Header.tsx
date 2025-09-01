@@ -53,42 +53,43 @@ export const Header = ({
         {/* Logo */}
         <div className="logo-section">
           <div className="logo-icon">
-            <Recycle className="h-6 w-6 text-primary-foreground" />
+             <img src="/icons/logohome.png" alt="Recycle Icon" className="header-icon" />
           </div>
-          <span className="logo-text">Swappo</span>
+          <span className="logo-text"></span>
         </div>
 
-        {/* Desktop Search */}
-        <div className="desktop-search">
-          <div className="search-container">
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search items..."
-              className="search-input"
-            />
-          </div>
-        </div>
+      
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center space-x-4">
-          {user ? (
+        <div className="desktop-actions ">
+          {user && (
             <>
-              <Button onClick={onPostItemClick} variant="default" size="sm">
+              <Button
+                onClick={onPostItemClick}
+                variant="default"
+                size="sm"
+                className="post-item-btn"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Post Item
               </Button>
-              
-              <Button onClick={onMyTradesClick} variant="outline" size="sm">
+
+              <Button
+                onClick={onMyTradesClick}
+                variant="outline"
+                size="sm"
+                className="my-trades-btn"
+              >
                 <ArrowRightLeft className="h-4 w-4 mr-2" />
                 My Trades
               </Button>
+
               
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium">{user.name}</span>
-                    <Badge variant="secondary" className={`${badgeConfig[user.badge].color} text-white`}>
+                    <span className="user-name">{user.name}</span>
+                    <Badge variant="default" className={`${badgeConfig[user.badge].color} text-white`}>
                       {badgeConfig[user.badge].label}
                     </Badge>
                   </div>
@@ -108,15 +109,14 @@ export const Header = ({
                   }
                 />
                 
-                <Button onClick={onLogoutClick} variant="ghost" size="sm">
-                  <LogOut className="h-4 w-4" />
+                <Button onClick={onLogoutClick} variant="ghost" size="sm" className="hover:scale-110 hover:bg-transparent transition">
+                  <img 
+                    src="/icons/exit.png"  alt="Logout" className="logout-icon"
+                  />
                 </Button>
               </div>
             </>
-          ) : (
-            <Button onClick={onLoginClick} variant="default">
-              Login
-            </Button>
+          
           )}
         </div>
 
