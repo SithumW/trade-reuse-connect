@@ -24,6 +24,7 @@ import {
 import { toast } from 'sonner';
 import { formatLocation, generateAvatar } from '@/utils/helpers';
 import { calculateDistance } from '@/utils/location';
+import "@/styles/components/ItemDetailsModal.css";
 
 interface ItemDetailsModalProps {
   isOpen: boolean;

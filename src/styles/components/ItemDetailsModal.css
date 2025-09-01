@@ -1,0 +1,439 @@
+/* ItemDetailsModal Component Styles */
+
+.item-details-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-details-modal-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.item-details-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .item-details-modal-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Image Section */
+.item-details-image-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.item-details-image-container {
+  position: relative;
+  aspect-ratio: 1;
+  background-color: var(--muted-background, #f9fafb);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.item-details-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-details-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.item-details-image-placeholder-icon {
+  height: 3rem;
+  width: 3rem;
+}
+
+.item-details-image-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.item-details-image-nav:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.item-details-image-nav.prev {
+  left: 0.75rem;
+}
+
+.item-details-image-nav.next {
+  right: 0.75rem;
+}
+
+.item-details-image-nav-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.item-details-image-counter {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* Image Thumbnails */
+.item-details-thumbnails {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.item-details-thumbnail {
+  flex-shrink: 0;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.item-details-thumbnail.active {
+  border-color: var(--primary-color, #2563eb);
+}
+
+.item-details-thumbnail-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Details Section */
+.item-details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.item-details-basic-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.item-details-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.item-details-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.item-details-condition-badge {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+}
+
+.item-details-category-badge {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 0.25rem;
+  color: var(--foreground, #1f2937);
+  background-color: transparent;
+  width: fit-content;
+}
+
+.item-details-description {
+  color: var(--muted-foreground, #6b7280);
+  line-height: 1.6;
+}
+
+/* Owner Card */
+.item-details-owner-card {
+  background: var(--card-color, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.item-details-owner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.item-details-owner-avatar {
+  height: 3rem;
+  width: 3rem;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.item-details-owner-avatar-image {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+}
+
+.item-details-owner-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background-color: var(--muted-background, #f3f4f6);
+  color: var(--muted-foreground, #6b7280);
+}
+
+.item-details-owner-info {
+  flex: 1;
+}
+
+.item-details-owner-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.item-details-owner-name {
+  font-weight: 600;
+}
+
+.item-details-owner-badge {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+}
+
+.item-details-owner-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.item-details-owner-rating-icon {
+  height: 1rem;
+  width: 1rem;
+  fill: #fbbf24;
+  color: #fbbf24;
+}
+
+/* Location and Meta */
+.item-details-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item-details-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+
+.item-details-meta-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* Trade Section */
+.item-details-trade-card {
+  background-color: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.item-details-trade-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.item-details-trade-title {
+  font-weight: 600;
+  color: var(--primary-color, #2563eb);
+}
+
+.item-details-trade-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 0.375rem;
+  background: var(--background-color, #ffffff);
+}
+
+.item-details-trade-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring-color, #3b82f6);
+}
+
+.item-details-trade-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.item-details-trade-button:hover:not(:disabled) {
+  background-color: var(--primary-hover, #1d4ed8);
+}
+
+.item-details-trade-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.item-details-trade-button-icon {
+  height: 1rem;
+  width: 1rem;
+  margin-right: 0.5rem;
+}
+
+/* Success State */
+.item-details-success-card {
+  background-color: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.item-details-success-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #065f46;
+}
+
+.item-details-success-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+/* Trade Request Actions */
+.item-details-trade-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.item-details-accept-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.item-details-accept-btn:hover {
+  background-color: #059669;
+}
+
+.item-details-reject-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.item-details-reject-btn:hover {
+  background-color: #b91c1c;
+}
+
+/* Owner Item Card */
+.item-details-owner-item-card {
+  background-color: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.item-details-owner-item-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #92400e;
+}
+
+.item-details-owner-item-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+/* Footer */
+.item-details-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.item-details-close-btn {
+  background-color: transparent;
+  color: var(--foreground, #1f2937);
+  border: 1px solid var(--border-color, #d1d5db);
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.item-details-close-btn:hover {
+  background-color: var(--muted-background, #f3f4f6);
+}

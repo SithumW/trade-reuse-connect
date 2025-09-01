@@ -4,6 +4,7 @@ import { useItems, useItemsByUser } from "@/hooks/useItems";
 import { tradeService } from "@/services/trade";
 import { ratingService } from "@/services/rating";
 import { Header } from "@/components/Header";
+import "@/styles/pages/Marketplace.css";
 import { ItemCard } from "@/components/ItemCard";
 import { PostItemModal } from "@/components/PostItemModal";
 import { MyItemsModal } from "@/components/MyItemsModal";

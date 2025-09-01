@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getImageUrl } from "@/config/env";
-import "@/styles/ProfileModal.css";
+import "@/styles/components/ProfileModal.css";
 
 interface ProfileModalProps {
   userId?: string;

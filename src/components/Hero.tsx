@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Recycle, Users, Award } from "lucide-react";
 import heroImage from "@/assets/hero-swappo.jpg";
+import "@/styles/components/Hero.css";
 
 interface HeroProps {
   onGetStarted?: () => void;
@@ -9,97 +10,94 @@ interface HeroProps {
 
 export const Hero = ({ onGetStarted, onLearnMore }: HeroProps) => {
   return (
-    <section className="relative min-h-[90vh] bg-gradient-hero overflow-hidden">
+    <section className="hero">
       {/* Background Image with Overlay */}
-      <div className="absolute inset-0">
+      <div className="hero-background">
         <img 
           src={heroImage} 
           alt="People swapping items in community" 
-          className="w-full h-full object-cover opacity-20"
+          className="hero-image"
         />
-        <div className="absolute inset-0 bg-gradient-hero opacity-90" />
+        <div className="hero-overlay" />
       </div>
 
       {/* Content */}
-      <div className="relative container mx-auto px-4 py-20 flex items-center min-h-[90vh]">
-        <div className="max-w-3xl space-y-8">
+      <div className="hero-content">
+        <div className="hero-content-inner">
           {/* Badge */}
-          <div className="inline-flex items-center space-x-2 bg-primary-foreground/20 backdrop-blur-sm text-primary-foreground px-4 py-2 rounded-full text-sm font-medium">
-            <Recycle className="h-4 w-4" />
+          <div className="hero-badge">
+            <Recycle className="hero-badge-icon" />
             <span>Sustainable Community Trading</span>
           </div>
 
           {/* Main Heading */}
-          <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold text-primary-foreground leading-tight">
+          <div className="hero-heading-section">
+            <h1 className="hero-title">
               Trade, Reuse,{" "}
-              <span className="bg-gradient-accent bg-clip-text text-transparent">
+              <span className="hero-accent-text">
                 Connect
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-primary-foreground/90 max-w-2xl leading-relaxed">
+            <p className="hero-subtitle">
               Join your local community in trading unused items. Reduce waste, save money, 
               and build meaningful connections through sustainable swapping.
             </p>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="hero-cta-section">
             <Button 
               onClick={onGetStarted}
-              size="lg" 
-              className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 shadow-medium"
+              className="hero-btn-primary"
             >
               Get Started Free
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <ArrowRight className="hero-btn-icon" />
             </Button>
             <Button 
               onClick={onLearnMore}
-              variant="outline" 
-              size="lg"
-              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              className="hero-btn-secondary"
             >
               Learn More
             </Button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 pt-8">
-            <div className="text-center">
-              <div className="flex justify-center mb-2">
-                <div className="bg-primary-foreground/20 p-3 rounded-lg">
-                  <Recycle className="h-6 w-6 text-primary-foreground" />
+          <div className="hero-stats">
+            <div className="hero-stat-item">
+              <div className="hero-stat-icon-container">
+                <div className="hero-stat-icon-bg">
+                  <Recycle className="hero-stat-icon" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-primary-foreground">10k+</div>
-              <div className="text-sm text-primary-foreground/80">Items Swapped</div>
+              <div className="hero-stat-number">10k+</div>
+              <div className="hero-stat-label">Items Swapped</div>
             </div>
             
-            <div className="text-center">
-              <div className="flex justify-center mb-2">
-                <div className="bg-primary-foreground/20 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-primary-foreground" />
+            <div className="hero-stat-item">
+              <div className="hero-stat-icon-container">
+                <div className="hero-stat-icon-bg">
+                  <Users className="hero-stat-icon" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-primary-foreground">5k+</div>
-              <div className="text-sm text-primary-foreground/80">Active Traders</div>
+              <div className="hero-stat-number">5k+</div>
+              <div className="hero-stat-label">Active Traders</div>
             </div>
             
-            <div className="text-center">
-              <div className="flex justify-center mb-2">
-                <div className="bg-primary-foreground/20 p-3 rounded-lg">
-                  <Award className="h-6 w-6 text-primary-foreground" />
+            <div className="hero-stat-item">
+              <div className="hero-stat-icon-container">
+                <div className="hero-stat-icon-bg">
+                  <Award className="hero-stat-icon" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-primary-foreground">4.8★</div>
-              <div className="text-sm text-primary-foreground/80">User Rating</div>
+              <div className="hero-stat-number">4.8★</div>
+              <div className="hero-stat-label">User Rating</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Decorative Elements */}
-      <div className="absolute -bottom-1 left-0 right-0 h-20 bg-background transform skew-y-2 origin-bottom-left" />
+      <div className="hero-decorative" />
     </section>
   );
 };
